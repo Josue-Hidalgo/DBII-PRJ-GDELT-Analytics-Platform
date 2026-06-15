@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Actores — GDELT{% endblock %}
+{% block content %}
+<h1>// Análisis de Actores</h1>
+<p class="subtitle">Análisis 4, 5, 10 — Distribución CAMEO · Matriz de actores · Conflictos por religión/región</p>
+
+<h2><span style="color:var(--accent)">▸</span> Análisis 5 — Matriz de Interacción entre Tipos de Actores</h2>
+<div class="card">
+  <div class="card-title"><span>#5</span>Frecuencia de interacciones GOV · MIL · REB · otros</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Actor 1 Tipo</th><th>Actor 2 Tipo</th><th>Eventos</th><th>Goldstein Avg</th><th>Tono Avg</th></tr></thead>
+      <tbody>
+        {% for row in data.matrix[:20] %}
+        <tr>
+          <td><span class="badge">{{ row.actor1_type }}</span></td>
+          <td><span class="badge">{{ row.actor2_type }}</span></td>
+          <td>{{ row.event_count }}</td>
+          <td>{{ "%.2f"|format(row.avg_goldstein|float) if row.avg_goldstein else 'N/A' }}</td>
+          <td>{{ "%.2f"|format(row.avg_tone|float) if row.avg_tone else 'N/A' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:1.25rem">
+  <div class="card">
+    <div class="card-title"><span>#4</span>Distribución CAMEO por Región</div>
+    <div class="chart-box"><canvas id="cameoChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#10</span>Conflictos por Religión y Región</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Religión</th><th>Región</th><th>Eventos</th><th>Goldstein</th></tr></thead>
+        <tbody>
+          {% for row in data.religion[:15] %}
+          <tr>
+            <td>{{ row.religion }}</td>
+            <td>{{ row.region }}</td>
+            <td>{{ row.event_count }}</td>
+            <td style="color:{% if row.avg_goldstein < 0 %}var(--danger){% else %}var(--ok){% endif %}">
+              {{ "%.2f"|format(row.avg_goldstein|float) if row.avg_goldstein else 'N/A' }}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const cameoData = {{ data.cameo | tojson }};
+  // Agrupar por región y EventRootCode — top 6 regiones
+  const byRegion = {};
+  cameoData.forEach(d => {
+    const r = d.region || 'Other';
+    byRegion[r] = (byRegion[r] || 0) + (d.event_count || 0);
+  });
+  const regions = Object.entries(byRegion).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if (regions.length) {
+    new Chart(document.getElementById('cameoChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: regions.map(r => r[0]),
+        datasets: [{ data: regions.map(r => r[1]),
+          backgroundColor: ['#00d4ff','#ff3860','#00e676','#ffcc00','#8b5cf6','#f97316','#06b6d4','#ec4899'],
+          borderWidth: 1, borderColor: '#0f1520' }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{color:'#c8d8e8',font:{size:11}} } } }
+    });
+  }
+</script>
+{% endblock %}
