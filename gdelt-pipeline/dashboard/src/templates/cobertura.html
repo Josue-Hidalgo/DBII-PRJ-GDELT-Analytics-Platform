@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Cobertura Mediática — GDELT{% endblock %}
+{% block content %}
+<h1>// Cobertura Mediática</h1>
+<p class="subtitle">Análisis 2, 6, 12, 15, 17 — Top países · Razón cobertura · Organizaciones · Diversidad · Noticias de última hora</p>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>#2</span>Top 10 Países — Más Eventos Noticiosos por Día</div>
+    <div class="chart-box"><canvas id="topCountriesChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#6</span>Razón Menciones/Evento por País</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Fecha</th><th>Menciones/Evento</th><th>Total Eventos</th></tr></thead>
+        <tbody>
+          {% for row in data.coverage_ratio[:15] %}
+          <tr>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ row.date }}</td>
+            <td>{{ "%.1f"|format(row.mentions_per_event|float) if row.mentions_per_event else 'N/A' }}</td>
+            <td>{{ row.total_events }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:1.25rem">
+  <div class="card">
+    <div class="card-title"><span>#12</span>Top Organizaciones Mencionadas</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Organización</th><th>Fecha</th><th>Menciones</th><th>Rank</th></tr></thead>
+        <tbody>
+          {% for row in data.organizations[:15] %}
+          <tr>
+            <td>{{ row.organization }}</td>
+            <td>{{ row.date }}</td>
+            <td>{{ row.mention_count }}</td>
+            <td><span class="badge">{{ row.rank }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#15</span>Índice de Diversidad de Fuentes por País</div>
+    <div class="chart-box"><canvas id="diversityChart"></canvas></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1.25rem">
+  <div class="card-title"><span>#17</span>Noticias de Última Hora — 0 → +100 Menciones en &lt;1h</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Event ID</th><th>Primera Mención</th><th>Menciones en 1h</th><th>País</th></tr></thead>
+      <tbody>
+        {% for row in data.breaking_news[:10] %}
+        <tr>
+          <td><code>{{ row.GlobalEventID }}</code></td>
+          <td>{{ row.first_mention_time }}</td>
+          <td><span class="badge badge-gold">{{ row.mentions_in_first_hour }}</span></td>
+          <td>{{ row.country or 'N/A' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const topCountries = {{ data.top_countries | tojson }};
+  // Agrupar por rank=1 (el top país de cada día)
+  const topByDay = topCountries.filter(d => d.rank === 1).slice(0, 14);
+  if (topByDay.length) {
+    new Chart(document.getElementById('topCountriesChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: topByDay.map(d => d.country + ' (' + d.date + ')'),
+        datasets: [{ label: 'Eventos', data: topByDay.map(d => d.event_count),
+          backgroundColor: 'rgba(0,212,255,0.5)', borderWidth: 0 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{ x:{ticks:{color:'#506070',font:{size:9}},grid:{color:'#1e2d40'}},
+                 y:{ticks:{color:'#506070'},grid:{color:'#1e2d40'}} } }
+    });
+  }
+
+  const diversity = {{ data.source_diversity[:12] | tojson }};
+  if (diversity.length) {
+    new Chart(document.getElementById('diversityChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: diversity.map(d => d.country),
+        datasets: [{ label: 'Fuentes únicas', data: diversity.map(d => d.unique_sources),
+          backgroundColor: 'rgba(0,230,118,0.5)', borderWidth: 0 }]
+      },
+      options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{ x:{ticks:{color:'#506070'},grid:{color:'#1e2d40'}},
+                 y:{ticks:{color:'#c8d8e8',font:{size:11}},grid:{display:false}} } }
+    });
+  }
+</script>
+{% endblock %}
