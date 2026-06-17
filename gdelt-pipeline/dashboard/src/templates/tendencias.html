@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Tendencias Extra — GDELT{% endblock %}
+{% block content %}
+<h1>// Análisis Extra</h1>
+<p class="subtitle">Análisis 18, 19 — Polarización mediática · Cooperación entre países en conflicto crónico</p>
+
+<h2><span style="color:var(--accent)">▸</span> Análisis 18 — Índice de Polarización Mediática por País/Semana</h2>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>#18</span>Países con mayor polarización de cobertura (desv. estándar del tono)</div>
+    <div class="chart-box"><canvas id="polarChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#18</span>Tabla de polarización</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Año</th><th>Semana</th><th>Std Dev Tono</th><th>Índice Polar.</th></tr></thead>
+        <tbody>
+          {% for row in data.polarization[:15] %}
+          <tr>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ row.year }}</td>
+            <td>{{ row.week }}</td>
+            <td>{{ "%.3f"|format(row.tone_std_dev|float) if row.tone_std_dev else 'N/A' }}</td>
+            <td><span class="badge badge-gold">
+              {{ "%.3f"|format(row.polarization_index|float) if row.polarization_index else 'N/A' }}
+            </span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Cooperación entre Países en Conflicto Crónico</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Pares de países con alto historial de conflicto (&gt;20 eventos) pero que también registran
+  eventos de cooperación — posible señal de distensión diplomática.
+</p>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>#19</span>Ratio de cooperación sobre total de interacciones</div>
+    <div class="chart-box"><canvas id="coopChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#19</span>Pares con mayor distensión potencial</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Actor 1</th><th>Actor 2</th><th>Conflictos</th><th>Cooperación</th><th>Ratio Coop.</th></tr></thead>
+        <tbody>
+          {% for row in data.cooperation[:15] %}
+          <tr>
+            <td><span class="badge badge-red">{{ row.actor1_country }}</span></td>
+            <td><span class="badge badge-red">{{ row.actor2_country }}</span></td>
+            <td style="color:var(--danger)">{{ row.conflict_events }}</td>
+            <td style="color:var(--ok)">{{ row.cooperation_events }}</td>
+            <td><span class="badge">{{ "%.3f"|format(row.cooperation_ratio|float) if row.cooperation_ratio else 'N/A' }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const polarData = {{ data.polarization[:12] | tojson }};
+  if (polarData.length) {
+    new Chart(document.getElementById('polarChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: polarData.map(d => d.country + ' W' + d.week),
+        datasets: [{
+          label: 'Índice de Polarización',
+          data: polarData.map(d => parseFloat(d.polarization_index) || 0),
+          backgroundColor: 'rgba(255,204,0,0.55)',
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#506070', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#1e2d40' } },
+          y: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
+        }
+      }
+    });
+  }
+
+  const coopData = {{ data.cooperation[:10] | tojson }};
+  if (coopData.length) {
+    new Chart(document.getElementById('coopChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: coopData.map(d => d.actor1_country + '↔' + d.actor2_country),
+        datasets: [
+          { label: 'Conflictos', data: coopData.map(d => d.conflict_events),
+            backgroundColor: 'rgba(255,56,96,0.6)', borderWidth: 0 },
+          { label: 'Cooperación', data: coopData.map(d => d.cooperation_events),
+            backgroundColor: 'rgba(0,230,118,0.6)', borderWidth: 0 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#c8d8e8' } } },
+        scales: {
+          x: { stacked: true, ticks: { color: '#506070', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#1e2d40' } },
+          y: { stacked: true, ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
