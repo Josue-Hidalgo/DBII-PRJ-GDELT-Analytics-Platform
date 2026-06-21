@@ -5,6 +5,10 @@
 <p class="subtitle">Análisis 1, 8, 9, 14, 16 — Intensidad Goldstein · Pares en conflicto · Escalada · Red diplomática · Etnias</p>
 
 <h2><span style="color:var(--danger)">▸</span> Análisis 1 — Mapa de Calor de Conflictos por País/Día</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  GoldsteinScale mide cada evento de -10 (máximo conflicto) a +10 (máxima cooperación).
+  Aquí se promedia por país y día, filtrando solo eventos de conflicto material/verbal (QuadClass ≥ 3).
+</p>
 <div class="grid grid-2">
   <div class="card">
     <div class="card-title"><span>#1</span>Promedio Goldstein por País (últimos datos)</div>
@@ -35,6 +39,10 @@
 </div>
 
 <h2 style="margin-top:2rem"><span style="color:var(--danger)">▸</span> Análisis 8 — Pares de Países en Conflicto Frecuente</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Pares de países (Actor1 ↔ Actor2) que más se enfrentan verbal o materialmente, contando
+  eventos con QuadClass ≥ 3 entre ambos.
+</p>
 <div class="card">
   <div class="card-title"><span>#8</span>Top pares Actor1 ↔ Actor2</div>
   <div class="table-wrap">
@@ -57,6 +65,10 @@
 </div>
 
 <h2 style="margin-top:2rem"><span style="color:var(--danger)">▸</span> Análisis 9 — Eventos con Escalada Acelerada</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Eventos cuyas menciones se concentran de forma anormal en una sola hora respecto a las 24 horas
+  previas (ratio &gt; 0.5) — señal de que la cobertura mediática está acelerando de golpe.
+</p>
 <div class="card">
   <div class="card-title"><span>#9</span>Eventos con ratio de escalada más alta (menciones en 24h)</div>
   <div class="table-wrap">
@@ -82,6 +94,10 @@
 <div class="grid grid-2" style="margin-top:2rem">
   <div>
     <h2><span style="color:var(--danger)">▸</span> Análisis 14 — Red Diplomática vs. Conflicto</h2>
+    <p class="subtitle" style="margin-bottom:1rem">
+      Para cada par de países, cuenta cuántas interacciones fueron diplomáticas/cooperativas
+      (QuadClass 1-2) frente a cuántas fueron de conflicto (QuadClass 3-4).
+    </p>
     <div class="card">
       <div class="card-title"><span>#14</span>Interacciones diplomáticas y conflictos por par de países</div>
       <div class="table-wrap">
@@ -105,6 +121,10 @@
   </div>
   <div>
     <h2><span style="color:var(--danger)">▸</span> Análisis 16 — Conflictos por Etnia</h2>
+    <p class="subtitle" style="margin-bottom:1rem">
+      Frecuencia de eventos de conflicto (QuadClass ≥ 3) agrupados por el código étnico
+      registrado del actor (Actor1EthnicCode / Actor2EthnicCode combinados).
+    </p>
     <div class="card">
       <div class="card-title"><span>#16</span>Grupos étnicos con más eventos de conflicto</div>
       <div class="chart-box"><canvas id="ethnicChart"></canvas></div>

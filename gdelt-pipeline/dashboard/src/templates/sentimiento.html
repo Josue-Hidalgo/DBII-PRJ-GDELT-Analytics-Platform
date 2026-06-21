@@ -4,15 +4,25 @@
 <h1>// Sentimiento y Tendencias</h1>
 <p class="subtitle">Análisis 3, 7, 11, 13 — Correlación tono/fuentes · Tendencia AvgTone · Temas GKG · Rezago tono→conflicto</p>
 
-<h2><span style="color:var(--accent)">▸</span> Análisis 7 — Tendencia de Sentimiento por País (Promedio Móvil 7d)</h2>
+<h2><span style="color:var(--accent)">▸</span> Análisis 7 — Tendencia de Sentimiento por País (Promedio Móvil 3d)</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  AvgTone diario por país suavizado con una ventana móvil de 3 días. para que la tendencia
+  sea visible incluso con la ventana corta de datos retenidos por el loader (ver RAW_RETENTION_HOURS).
+  Valores positivos indican cobertura mediática más favorable; negativos, más hostil.
+</p>
 <div class="card">
-  <div class="card-title"><span>#7</span>AvgTone y Moving Average 7 días — top países</div>
+  <div class="card-title"><span>#7</span>AvgTone y Moving Average 3 días — top países</div>
   <div class="chart-box" style="height:320px"><canvas id="sentimentChart"></canvas></div>
 </div>
 
 <div class="grid grid-2" style="margin-top:1.25rem">
   <div class="card">
     <div class="card-title"><span>#3</span>Correlación AvgTone vs. NumSources</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Correlación de Pearson entre el tono promedio y el número de fuentes que cubren un evento.
+      Cercano a +1: a más fuentes, tono más positivo. Cercano a -1: a más fuentes, tono más negativo.
+      Cercano a 0: no hay relación clara entre cobertura y tono.
+    </p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>País</th><th>Fecha</th><th>Tono Avg</th><th>Fuentes Avg</th><th>Correlación</th></tr></thead>
@@ -36,6 +46,11 @@
   </div>
   <div class="card">
     <div class="card-title"><span>#13</span>Rezago: Tono de Hoy → Conflictos de Mañana</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Compara el tono mediático promedio de un país en un día con la cantidad de eventos de
+      conflicto (QuadClass ≥ 3) registrados al día siguiente — busca indicios de que el tono
+      de hoy anticipe escalada de conflicto mañana.
+    </p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>País</th><th>Fecha</th><th>Tono Hoy</th><th>Conflictos Hoy</th><th>Conflictos Mañana</th></tr></thead>
@@ -59,6 +74,10 @@
 
 <div class="card" style="margin-top:1.25rem">
   <div class="card-title"><span>#11</span>Top Temas GKG por Continente y Año</div>
+  <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+    Temas extraídos del campo V2Themes del Global Knowledge Graph (GKG), agrupados por continente
+    de origen y año, mostrando los 10 temas más mencionados de cada combinación.
+  </p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Tema</th><th>Continente</th><th>Año</th><th>Menciones</th><th>Rank</th></tr></thead>
@@ -88,7 +107,7 @@
     const pts = trendData.filter(d => d.country === c).slice(-30);
     return {
       label: c,
-      data: pts.map(d => ({ x: String(d.date), y: parseFloat(d.moving_avg_7d) || 0 })),
+      data: pts.map(d => ({ x: String(d.date), y: parseFloat(d.moving_avg_3d) || 0 })),
       borderColor: colors[i], backgroundColor: 'transparent',
       tension: 0.3, pointRadius: 2,
     };

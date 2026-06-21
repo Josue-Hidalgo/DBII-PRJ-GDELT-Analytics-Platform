@@ -2,32 +2,44 @@
 {% block title %}Tendencias Extra — GDELT{% endblock %}
 {% block content %}
 <h1>// Análisis Extra</h1>
-<p class="subtitle">Análisis 18, 19 — Polarización mediática · Cooperación entre países en conflicto crónico</p>
+<p class="subtitle">Análisis 18, 19 — Eventos con tono más extremo · Velocidad de respuesta mediática por país</p>
 
-<h2><span style="color:var(--accent)">▸</span> Análisis 18 — Índice de Polarización Mediática por País/Semana</h2>
+<h2><span style="color:var(--accent)">▸</span> Análisis 18 — Eventos con Tono Más Extremo del Periodo</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  AvgTone va de aproximadamente -100 (cobertura extremadamente negativa) a +100 (extremadamente positiva).
+  Aquí se listan los eventos con el tono más bajo y más alto registrados en el periodo analizado —
+  útil para identificar rápidamente las noticias más hostiles o más favorables del lote de datos,
+  sin depender de acumular varios días.
+</p>
 <div class="grid grid-2">
   <div class="card">
-    <div class="card-title"><span>#18</span>Países con mayor polarización de cobertura (desv. estándar del tono)</div>
-    <div class="chart-box"><canvas id="polarChart"></canvas></div>
+    <div class="card-title"><span>#18</span>Comparación de tono — más negativos vs. más positivos</div>
+    <div class="chart-box"><canvas id="extremeChart"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title"><span>#18</span>Tabla de polarización</div>
+    <div class="card-title"><span>#18</span>Detalle de eventos extremos</div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>País</th><th>Año</th><th>Semana</th><th>Std Dev Tono</th><th>Índice Polar.</th></tr></thead>
+        <thead><tr><th>Tipo</th><th>País</th><th>Código CAMEO</th><th>Tono</th><th>Menciones</th></tr></thead>
         <tbody>
-          {% for row in data.polarization[:15] %}
+          {% for row in data.extreme_tone[:20] %}
           <tr>
+            <td>
+              {% if row.tone_extreme_type == 'most_negative' %}
+                <span class="badge badge-red">Negativo</span>
+              {% else %}
+                <span class="badge" style="background:rgba(0,230,118,0.15);color:var(--ok)">Positivo</span>
+              {% endif %}
+            </td>
             <td><span class="badge">{{ row.country }}</span></td>
-            <td>{{ row.year }}</td>
-            <td>{{ row.week }}</td>
-            <td>{{ "%.3f"|format(row.tone_std_dev|float) if row.tone_std_dev else 'N/A' }}</td>
-            <td><span class="badge badge-gold">
-              {{ "%.3f"|format(row.polarization_index|float) if row.polarization_index else 'N/A' }}
-            </span></td>
+            <td>{{ row.EventRootCode }}</td>
+            <td style="color:{% if row.AvgTone < 0 %}var(--danger){% else %}var(--ok){% endif %}">
+              {{ "%.2f"|format(row.AvgTone|float) if row.AvgTone is not none else 'N/A' }}
+            </td>
+            <td>{{ row.NumMentions }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          <tr><td colspan="5" style="color:var(--muted)">Sin datos aún — ejecuta el pipeline</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -35,32 +47,32 @@
   </div>
 </div>
 
-<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Cooperación entre Países en Conflicto Crónico</h2>
+<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Velocidad de Respuesta Mediática por País</h2>
 <p class="subtitle" style="margin-bottom:1rem">
-  Pares de países con alto historial de conflicto (&gt;20 eventos) pero que también registran
-  eventos de cooperación — posible señal de distensión diplomática.
+  Tiempo promedio (en minutos) que tarda en aparecer la primera mención de un evento después de
+  registrado (DATEADDED → MentionTimeDate). Un valor bajo indica que la prensa de ese país reacciona
+  casi en tiempo real; un valor alto sugiere cobertura más lenta o eventos que tardan en hacerse noticia.
 </p>
 <div class="grid grid-2">
   <div class="card">
-    <div class="card-title"><span>#19</span>Ratio de cooperación sobre total de interacciones</div>
-    <div class="chart-box"><canvas id="coopChart"></canvas></div>
+    <div class="card-title"><span>#19</span>Países con respuesta mediática más rápida</div>
+    <div class="chart-box"><canvas id="responseChart"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title"><span>#19</span>Pares con mayor distensión potencial</div>
+    <div class="card-title"><span>#19</span>Tabla de velocidad de respuesta</div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Actor 1</th><th>Actor 2</th><th>Conflictos</th><th>Cooperación</th><th>Ratio Coop.</th></tr></thead>
+        <thead><tr><th>País</th><th>Promedio (min)</th><th>Más rápida (min)</th><th>Muestra</th></tr></thead>
         <tbody>
-          {% for row in data.cooperation[:15] %}
+          {% for row in data.response_time[:15] %}
           <tr>
-            <td><span class="badge badge-red">{{ row.actor1_country }}</span></td>
-            <td><span class="badge badge-red">{{ row.actor2_country }}</span></td>
-            <td style="color:var(--danger)">{{ row.conflict_events }}</td>
-            <td style="color:var(--ok)">{{ row.cooperation_events }}</td>
-            <td><span class="badge">{{ "%.3f"|format(row.cooperation_ratio|float) if row.cooperation_ratio else 'N/A' }}</span></td>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ "%.1f"|format(row.avg_response_minutes|float) if row.avg_response_minutes is not none else 'N/A' }}</td>
+            <td style="color:var(--ok)">{{ "%.1f"|format(row.fastest_response_minutes|float) if row.fastest_response_minutes is not none else 'N/A' }}</td>
+            <td>{{ row.sample_size }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -69,16 +81,44 @@
 </div>
 
 <script>
-  const polarData = {{ data.polarization[:12] | tojson }};
-  if (polarData.length) {
-    new Chart(document.getElementById('polarChart').getContext('2d'), {
+  // ─── Chart 1: Eventos con tono extremo (negativos vs positivos) ───
+  const extremeData = {{ data.extreme_tone[:20] | tojson }};
+  if (extremeData.length) {
+    const sorted = [...extremeData].sort((a, b) => (a.AvgTone || 0) - (b.AvgTone || 0));
+    new Chart(document.getElementById('extremeChart').getContext('2d'), {
       type: 'bar',
       data: {
-        labels: polarData.map(d => d.country + ' W' + d.week),
+        labels: sorted.map(d => d.country + ' · ' + (d.EventRootCode || '?')),
         datasets: [{
-          label: 'Índice de Polarización',
-          data: polarData.map(d => parseFloat(d.polarization_index) || 0),
-          backgroundColor: 'rgba(255,204,0,0.55)',
+          label: 'AvgTone',
+          data: sorted.map(d => parseFloat(d.AvgTone) || 0),
+          backgroundColor: sorted.map(d => (parseFloat(d.AvgTone) || 0) < 0 ? 'rgba(255,56,96,0.7)' : 'rgba(0,230,118,0.7)'),
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } },
+          y: { ticks: { color: '#c8d8e8', font: { size: 9 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // ─── Chart 2: Velocidad de respuesta por país ───
+  const responseData = {{ data.response_time[:12] | tojson }};
+  if (responseData.length) {
+    new Chart(document.getElementById('responseChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: responseData.map(d => d.country),
+        datasets: [{
+          label: 'Minutos promedio hasta primera mención',
+          data: responseData.map(d => parseFloat(d.avg_response_minutes) || 0),
+          backgroundColor: 'rgba(0,212,255,0.55)',
           borderWidth: 0,
         }]
       },
@@ -86,32 +126,8 @@
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#506070', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#1e2d40' } },
+          x: { ticks: { color: '#506070', font: { size: 10 } }, grid: { color: '#1e2d40' } },
           y: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
-        }
-      }
-    });
-  }
-
-  const coopData = {{ data.cooperation[:10] | tojson }};
-  if (coopData.length) {
-    new Chart(document.getElementById('coopChart').getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: coopData.map(d => d.actor1_country + '↔' + d.actor2_country),
-        datasets: [
-          { label: 'Conflictos', data: coopData.map(d => d.conflict_events),
-            backgroundColor: 'rgba(255,56,96,0.6)', borderWidth: 0 },
-          { label: 'Cooperación', data: coopData.map(d => d.cooperation_events),
-            backgroundColor: 'rgba(0,230,118,0.6)', borderWidth: 0 },
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#c8d8e8' } } },
-        scales: {
-          x: { stacked: true, ticks: { color: '#506070', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#1e2d40' } },
-          y: { stacked: true, ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
         }
       }
     });

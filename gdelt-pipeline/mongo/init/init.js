@@ -76,7 +76,7 @@ db.media_coverage_ratio.createIndex({ mentions_per_event: -1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ANÁLISIS 7 — Tendencia de sentimiento (promedio móvil AvgTone)
-// Campos: country, date, avg_tone, moving_avg_7d
+// Campos: country, date, avg_tone, moving_avg_3d
 // ─────────────────────────────────────────────────────────────────────────────
 createCollection("sentiment_trend", null, "Tendencia del tono mediático con promedio móvil 7d");
 db.sentiment_trend.createIndex({ country: 1, date: 1 });
@@ -163,21 +163,21 @@ db.breaking_news.createIndex({ mentions_in_first_hour: -1 });
 db.breaking_news.createIndex({ country: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANÁLISIS 18 [Extra] — Polarización mediática
-// Campos: country, year, week, tone_std_dev, avg_tone, event_count, polarization_index
+// ANÁLISIS 18 [Extra] — Top eventos con tono más extremo del periodo
+// Campos: GlobalEventID, country, EventRootCode, QuadClass, AvgTone,
+//         NumMentions, Day, tone_extreme_type ("most_positive"/"most_negative")
 // ─────────────────────────────────────────────────────────────────────────────
-createCollection("media_polarization", null, "[Extra] Índice de polarización mediática por país/semana");
-db.media_polarization.createIndex({ country: 1, year: -1, week: -1 });
-db.media_polarization.createIndex({ polarization_index: -1 });
+createCollection("extreme_tone_events", null, "[Extra] Eventos con el tono más extremo (positivo/negativo) del periodo");
+db.extreme_tone_events.createIndex({ tone_extreme_type: 1, AvgTone: 1 });
+db.extreme_tone_events.createIndex({ country: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANÁLISIS 19 [Extra] — Cooperación entre países en conflicto crónico
-// Campos: actor1_country, actor2_country, conflict_events, cooperation_events,
-//         total_events, cooperation_ratio
+// ANÁLISIS 19 [Extra] — Velocidad de respuesta mediática por país
+// Campos: country, avg_response_minutes, fastest_response_minutes, sample_size
 // ─────────────────────────────────────────────────────────────────────────────
-createCollection("cooperation_amid_conflict", null, "[Extra] Distensión entre países en conflicto crónico");
-db.cooperation_amid_conflict.createIndex({ actor1_country: 1, actor2_country: 1 });
-db.cooperation_amid_conflict.createIndex({ cooperation_ratio: -1 });
+createCollection("mention_response_time", null, "[Extra] Tiempo promedio evento → primera mención, por país");
+db.mention_response_time.createIndex({ avg_response_minutes: 1 });
+db.mention_response_time.createIndex({ country: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // METADATOS — registro de ejecuciones del pipeline

@@ -5,6 +5,10 @@
 <p class="subtitle">Análisis 4, 5, 10 — Distribución CAMEO · Matriz de actores · Conflictos por religión/región</p>
 
 <h2><span style="color:var(--accent)">▸</span> Análisis 5 — Matriz de Interacción entre Tipos de Actores</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Frecuencia de interacciones entre tipos de actor (GOV=gobierno, MIL=militar, REB=rebeldes,
+  etc., según Actor1Type1Code/Actor2Type1Code), con el promedio Goldstein y tono de esas interacciones.
+</p>
 <div class="card">
   <div class="card-title"><span>#5</span>Frecuencia de interacciones GOV · MIL · REB · otros</div>
   <div class="table-wrap">
@@ -30,10 +34,18 @@
 <div class="grid grid-2" style="margin-top:1.25rem">
   <div class="card">
     <div class="card-title"><span>#4</span>Distribución CAMEO por Región</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Proporción de eventos por región geográfica, agrupando los 20 tipos de evento base del
+      sistema de codificación CAMEO (declaraciones, cooperación, amenazas, ataques, etc.).
+    </p>
     <div class="chart-box"><canvas id="cameoChart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-title"><span>#10</span>Conflictos por Religión y Región</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Eventos de conflicto (QuadClass ≥ 3) agrupados por la religión del actor involucrado
+      (Actor1Religion1Code / Actor2Religion1Code) y la región geográfica del evento.
+    </p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Religión</th><th>Región</th><th>Eventos</th><th>Goldstein</th></tr></thead>

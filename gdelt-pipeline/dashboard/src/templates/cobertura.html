@@ -7,10 +7,18 @@
 <div class="grid grid-2">
   <div class="card">
     <div class="card-title"><span>#2</span>Top 10 Países — Más Eventos Noticiosos por Día</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Países donde ocurrieron más eventos (ActionGeo_CountryCode), rankeados por día. Muestra el
+      ranking #1 de cada día disponible.
+    </p>
     <div class="chart-box"><canvas id="topCountriesChart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-title"><span>#6</span>Razón Menciones/Evento por País</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Total de menciones dividido entre total de eventos por país — un valor alto indica que cada
+      evento de ese país genera, en promedio, mucha más cobertura mediática que en otros países.
+    </p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>País</th><th>Fecha</th><th>Menciones/Evento</th><th>Total Eventos</th></tr></thead>
@@ -34,6 +42,10 @@
 <div class="grid grid-2" style="margin-top:1.25rem">
   <div class="card">
     <div class="card-title"><span>#12</span>Top Organizaciones Mencionadas</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Organizaciones extraídas del campo Organizations del GKG, rankeadas por número de
+      menciones globales por día (top 20 diario).
+    </p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Organización</th><th>Fecha</th><th>Menciones</th><th>Rank</th></tr></thead>
@@ -54,12 +66,20 @@
   </div>
   <div class="card">
     <div class="card-title"><span>#15</span>Índice de Diversidad de Fuentes por País</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Número de medios distintos (MentionSourceName únicos) que cubren los eventos de cada país.
+      Más fuentes distintas = cobertura más plural, menos dependiente de un solo medio.
+    </p>
     <div class="chart-box"><canvas id="diversityChart"></canvas></div>
   </div>
 </div>
 
 <div class="card" style="margin-top:1.25rem">
   <div class="card-title"><span>#17</span>Noticias de Última Hora — 0 → +100 Menciones en &lt;1h</div>
+  <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+    Eventos que acumularon más de 100 menciones en la primera hora desde su primer registro —
+    indicador de cobertura mediática viral o de última hora.
+  </p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Event ID</th><th>Primera Mención</th><th>Menciones en 1h</th><th>País</th></tr></thead>

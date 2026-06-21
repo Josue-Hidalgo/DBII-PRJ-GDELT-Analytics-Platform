@@ -130,8 +130,8 @@ def sentimiento():
 def tendencias():
     """Sección: Análisis Extra (análisis 18, 19)."""
     data = {
-        "polarization":  query("media_polarization", sort=[("polarization_index", -1)], limit=50),
-        "cooperation":   query("cooperation_amid_conflict", sort=[("cooperation_ratio", -1)], limit=50),
+        "extreme_tone": query("extreme_tone_events", sort=[("AvgTone", 1)], limit=30),
+        "response_time": query("mention_response_time", sort=[("avg_response_minutes", 1)], limit=50),
     }
     return render_template("tendencias.html", data=data)
 
@@ -155,8 +155,8 @@ def api_collection(collection: str):
         "sentiment_trend", "conflict_pairs", "escalation_events",
         "religion_conflict_cluster", "gkg_themes_continent", "top_organizations",
         "tone_conflict_lag", "diplomatic_network", "source_diversity_index",
-        "ethnic_conflicts", "breaking_news", "media_polarization",
-        "cooperation_amid_conflict",
+        "ethnic_conflicts", "breaking_news", "extreme_tone_events",
+        "mention_response_time",
     }
     if collection not in allowed:
         return jsonify({"error": "Colección no encontrada"}), 404

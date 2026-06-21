@@ -5,47 +5,77 @@ Análisis incluidos:
   3.  Correlación AvgTone vs. número de fuentes noticiosas
   4.  Distribución de tipos de eventos CAMEO por región del mundo
   5.  Matriz de interacción entre tipos de actores
-  7.  Tendencia de sentimiento por país (promedio móvil AvgTone)
+  7.  Tendencia de sentimiento por país (promedio móvil AvgTone, ventana 3 días)
  10.  Agrupamiento de eventos de conflicto por religión/región
  11.  Principales temas GKG por continente por año
  13.  Análisis de rezago: ¿el tono de hoy predice conflictos mañana?
- 18.  [Extra] Índice de polarización mediática por país/semana
- 19.  [Extra] Eventos de cooperación entre países en conflicto crónico
+ 18.  [Extra] Top eventos con tono más extremo (positivo/negativo) del periodo
+ 19.  [Extra] Velocidad de respuesta mediática: tiempo evento → primera mención por país
 
 MongoDB schemas:
   tone_source_correlation   → {country, date, avg_tone, avg_sources, correlation}
   cameo_distribution        → {event_root_code, event_desc, region, date, event_count}
   actor_interaction_matrix  → {actor1_type, actor2_type, event_count, avg_goldstein}
-  sentiment_trend           → {country, date, avg_tone, moving_avg_7d}
+  sentiment_trend           → {country, date, avg_tone, moving_avg_3d}
   religion_conflict_cluster → {religion, region, event_count, avg_goldstein, date}
   gkg_themes_continent      → {theme, continent, year, mention_count, rank}
   tone_conflict_lag         → {country, date, today_avg_tone, tomorrow_conflict_count}
-  media_polarization        → {country, week, tone_std_dev, polarization_index}
-  cooperation_amid_conflict  → {actor1_country, actor2_country, conflict_events, cooperation_events, ratio}
+  extreme_tone_events       → {GlobalEventID, country, EventRootCode, QuadClass, AvgTone, NumMentions, tone_extreme_type}
+  mention_response_time     → {country, avg_response_minutes, fastest_response_minutes, sample_size}
 """
 
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from spark_session import create_session, get_args, write_to_mongo, read_events
 
-# Mapeo de código de país a región (simplificado — en producción usar un lookup completo)
+# IMPORTANTE: GDELT usa códigos de país FIPS 10-4, NO ISO 3166-1 alpha-2.
+# Algunos códigos que difieren entre ambos estándares (causa común de mapeos
+# incorrectos si se usa una librería o tabla basada en ISO):
+#   FIPS "UK" = Reino Unido   (ISO sería "GB")
+#   FIPS "GM" = Alemania      (ISO "GM" no existe / en ISO sería Gambia)
+#   FIPS "RS" = Rusia         (ISO "RS" es Serbia)
+#   FIPS "SP" = España        (ISO sería "ES")
+#   FIPS "PO" = Polonia       (ISO sería "PL")
+#   FIPS "IZ" = Irak          (ISO sería "IQ")
+#   FIPS "SF" = Sudáfrica     (ISO sería "ZA")
+#   FIPS "CH" = China         (ISO sería "CN")
+#   FIPS "JA" = Japón         (ISO sería "JP")
+#   FIPS "KS" = Corea del Sur (ISO sería "KR")
+#   FIPS "AS" = Australia     (ISO sería "AU")
+#   FIPS "IS" = Israel        (ISO sería "IL")
+#   FIPS "NI" = Nigeria       (ISO sería "NG")
+#   FIPS "UP" = Ucrania       (ISO sería "UA")
+# Todas las claves de REGION_MAP/CONTINENT_MAP/COUNTRY_NAMES deben ser FIPS.
 REGION_MAP = {
     "US": "North America", "CA": "North America", "MX": "North America",
     "BR": "South America", "AR": "South America", "CO": "South America",
-    "GB": "Europe", "FR": "Europe", "DE": "Europe", "IT": "Europe", "ES": "Europe",
-    "RU": "Europe/Asia", "UA": "Europe",
-    "CN": "Asia", "JP": "Asia", "IN": "Asia", "KR": "Asia", "PK": "Asia",
-    "IR": "Middle East", "IQ": "Middle East", "SA": "Middle East", "IL": "Middle East",
-    "NG": "Africa", "ET": "Africa", "KE": "Africa", "ZA": "Africa", "EG": "Africa",
-    "AU": "Oceania", "NZ": "Oceania",
+    "UK": "Europe", "FR": "Europe", "GM": "Europe", "IT": "Europe", "SP": "Europe",
+    "RS": "Europe/Asia", "UP": "Europe", "PO": "Europe",
+    "CH": "Asia", "JA": "Asia", "IN": "Asia", "KS": "Asia", "PK": "Asia",
+    "IR": "Middle East", "IZ": "Middle East", "SA": "Middle East", "IS": "Middle East",
+    "NI": "Africa", "ET": "Africa", "KE": "Africa", "SF": "Africa", "EG": "Africa",
+    "AS": "Oceania", "NZ": "Oceania",
 }
 
 CONTINENT_MAP = {
     "US": "Americas", "CA": "Americas", "MX": "Americas", "BR": "Americas",
-    "GB": "Europe", "FR": "Europe", "DE": "Europe", "RU": "Europe",
-    "CN": "Asia", "IN": "Asia", "JP": "Asia",
-    "NG": "Africa", "ZA": "Africa", "EG": "Africa",
-    "AU": "Oceania",
+    "UK": "Europe", "FR": "Europe", "GM": "Europe", "RS": "Europe",
+    "CH": "Asia", "IN": "Asia", "JA": "Asia",
+    "NI": "Africa", "SF": "Africa", "EG": "Africa",
+    "AS": "Oceania",
+}
+
+# Nombres legibles FIPS → nombre completo, para usar en el dashboard
+# (evita mostrar solo el código de 2 letras en tablas/gráficas).
+COUNTRY_NAMES = {
+    "US": "Estados Unidos", "CA": "Canadá", "MX": "México",
+    "BR": "Brasil", "AR": "Argentina", "CO": "Colombia",
+    "UK": "Reino Unido", "FR": "Francia", "GM": "Alemania", "IT": "Italia", "SP": "España",
+    "RS": "Rusia", "UP": "Ucrania", "PO": "Polonia",
+    "CH": "China", "JA": "Japón", "IN": "India", "KS": "Corea del Sur", "PK": "Pakistán",
+    "IR": "Irán", "IZ": "Irak", "SA": "Arabia Saudita", "IS": "Israel",
+    "NI": "Nigeria", "ET": "Etiopía", "KE": "Kenia", "SF": "Sudáfrica", "EG": "Egipto",
+    "AS": "Australia", "NZ": "Nueva Zelanda",
 }
 
 
@@ -162,7 +192,12 @@ def run_actor_interaction_matrix(events_df, spark):
 
 def run_sentiment_trend(events_df, spark):
     """
-    Análisis 7: Tendencia de sentimiento por país con promedio móvil de 7 días.
+    Análisis 7: Tendencia de sentimiento por país con promedio móvil.
+    Usamos ventana de 3 días (no 7) porque el loader solo retiene
+    RAW_RETENTION_HOURS (ver .env) y agrupamos por día (date_clean = YYYYMMDD).
+    Una ventana de 7 días rara vez tendría suficientes días reales acumulados
+    para mostrar una tendencia visible; 3 días sigue demostrando el
+    promedio móvil con los datos realmente disponibles en el pipeline.
     """
     daily_tone = (
         events_df
@@ -175,17 +210,17 @@ def run_sentiment_trend(events_df, spark):
         .orderBy("country", "date")
     )
 
-    # Promedio móvil de 7 días usando window function
-    window_7d = (
+    # Promedio móvil de 3 días usando window function
+    window_3d = (
         Window
         .partitionBy("country")
         .orderBy(F.col("date"))
-        .rowsBetween(-6, 0)
+        .rowsBetween(-2, 0)
     )
 
     result = (
         daily_tone
-        .withColumn("moving_avg_7d", F.avg("avg_tone").over(window_7d))
+        .withColumn("moving_avg_3d", F.avg("avg_tone").over(window_3d))
         .orderBy("country", "date")
     )
     write_to_mongo(result, "sentiment_trend")
@@ -313,57 +348,94 @@ def run_tone_conflict_lag(events_df, spark):
     write_to_mongo(result, "tone_conflict_lag")
     print("✔ Análisis 13 (rezago tono→conflicto) completado.")
 
-def run_media_polarization(events_df, spark):
-    result = (
+def run_extreme_tone_events(events_df, spark):
+    """
+    Análisis 18 [Extra]: Top eventos con el tono más extremo del periodo,
+    tanto positivo (máxima cooperación percibida) como negativo (máxima
+    hostilidad percibida) según AvgTone.
+    Reemplaza el análisis original de "polarización semanal" porque ese
+    agrupaba por semana del año y, con pocas horas de datos RAW retenidos
+    por el loader, casi siempre cae en una sola semana — la gráfica no
+    tiene nada que mostrar. Este análisis sí se puebla siempre que haya
+    al menos un puñado de eventos, sin depender de acumular varias semanas.
+    """
+    base = (
         events_df
-        .filter(F.col("ActionGeo_CountryCode").isNotNull())
-        # Usar Day (ya es int YYYYMMDD) en vez de parsear DATEADDED
-        .withColumn("date_str", F.col("Day").cast("string"))
-        .withColumn("date_clean", F.to_date(F.col("date_str"), "yyyyMMdd"))
-        .filter(F.col("date_clean").isNotNull())
-        .withColumn("week", F.weekofyear(F.col("date_clean")))
-        .withColumn("year", F.year(F.col("date_clean")))
-        .groupBy("ActionGeo_CountryCode", "year", "week")
-        .agg(
-            F.stddev(F.col("AvgTone").cast("double")).alias("tone_std_dev"),
-            F.avg(F.col("AvgTone").cast("double")).alias("avg_tone"),
-            F.count("GlobalEventID").alias("event_count"),
-        )
-        .withColumn(
-            "polarization_index",
-            F.col("tone_std_dev") / (F.abs(F.col("avg_tone")) + 1)
+        .filter(F.col("AvgTone").isNotNull() & F.col("ActionGeo_CountryCode").isNotNull())
+        .select(
+            "GlobalEventID", "ActionGeo_CountryCode", "ActionGeo_FullName",
+            "EventRootCode", "QuadClass", "AvgTone", "NumMentions", "Day",
         )
         .withColumnRenamed("ActionGeo_CountryCode", "country")
-        .orderBy(F.desc("polarization_index"))
     )
-    write_to_mongo(result, "media_polarization")
-    print("✔ Análisis 18 (polarización mediática) completado.")
 
-def run_cooperation_amid_conflict(events_df, spark):
-    pairs = (
-        events_df
-        .filter(
-            F.col("Actor1CountryCode").isNotNull() &
-            F.col("Actor2CountryCode").isNotNull() &
-            (F.col("Actor1CountryCode") != F.col("Actor2CountryCode"))
-        )
-        .groupBy("Actor1CountryCode", "Actor2CountryCode")
-        .agg(
-            F.sum(F.when(F.col("QuadClass").cast("int") >= 3, 1).otherwise(0)).alias("conflict_events"),
-            F.sum(F.when(F.col("QuadClass").cast("int") <= 2, 1).otherwise(0)).alias("cooperation_events"),
-            F.count("GlobalEventID").alias("total_events"),
-        )
-        .withColumn(
-            "cooperation_ratio",
-            F.col("cooperation_events") / (F.col("total_events") + 1)
-        )
-        .filter(F.col("conflict_events") > 20)
-        .withColumnRenamed("Actor1CountryCode", "actor1_country")
-        .withColumnRenamed("Actor2CountryCode", "actor2_country")
-        .orderBy(F.desc("cooperation_ratio"))
+    most_negative = (
+        base.orderBy(F.col("AvgTone").asc())
+        .limit(15)
+        .withColumn("tone_extreme_type", F.lit("most_negative"))
     )
-    write_to_mongo(pairs, "cooperation_amid_conflict")
-    print("✔ Análisis 19 (cooperación entre países en conflicto) completado.")
+    most_positive = (
+        base.orderBy(F.col("AvgTone").desc())
+        .limit(15)
+        .withColumn("tone_extreme_type", F.lit("most_positive"))
+    )
+
+    result = most_negative.unionByName(most_positive).orderBy(F.desc("tone_extreme_type"), F.col("AvgTone").asc())
+    write_to_mongo(result, "extreme_tone_events")
+    print("✔ Análisis 18 (eventos con tono más extremo) completado.")
+
+
+def run_mention_response_time(events_df, mentions_df, spark):
+    """
+    Análisis 19 [Extra]: Velocidad de respuesta mediática por país —
+    tiempo promedio (en minutos) entre que ocurre un evento (DATEADDED)
+    y su primera mención registrada (MentionTimeDate).
+    Reemplaza "cooperación entre países en conflicto crónico" porque ese
+    requería >20 eventos de conflicto entre el mismo par de países, umbral
+    que casi nunca se alcanza con pocas horas de datos RAW — la colección
+    salía vacía la mayoría de las corridas. Este análisis usa el mismo
+    cruce events+mentions que ya existe en el pipeline (análisis 17) y
+    siempre tiene datos mientras existan menciones.
+    """
+    events_ts = (
+        events_df
+        .filter(F.col("ActionGeo_CountryCode").isNotNull())
+        .withColumn("event_ts", F.to_timestamp(F.col("DATEADDED"), "yyyyMMddHHmmss"))
+        .filter(F.col("event_ts").isNotNull())
+        .select("GlobalEventID", "ActionGeo_CountryCode", "event_ts")
+        .withColumnRenamed("ActionGeo_CountryCode", "country")
+    )
+
+    first_mention = (
+        mentions_df
+        .withColumn("mention_ts", F.to_timestamp(F.col("MentionTimeDate"), "yyyyMMddHHmmss"))
+        .filter(F.col("mention_ts").isNotNull())
+        .groupBy("GlobalEventID")
+        .agg(F.min("mention_ts").alias("first_mention_ts"))
+    )
+
+    joined = (
+        events_ts
+        .join(first_mention, on="GlobalEventID", how="inner")
+        .withColumn(
+            "response_minutes",
+            (F.col("first_mention_ts").cast("long") - F.col("event_ts").cast("long")) / 60.0
+        )
+        .filter(F.col("response_minutes") >= 0)
+    )
+
+    result = (
+        joined
+        .groupBy("country")
+        .agg(
+            F.avg("response_minutes").alias("avg_response_minutes"),
+            F.min("response_minutes").alias("fastest_response_minutes"),
+            F.count("GlobalEventID").alias("sample_size"),
+        )
+        .orderBy("avg_response_minutes")
+    )
+    write_to_mongo(result, "mention_response_time")
+    print("✔ Análisis 19 (velocidad de respuesta mediática) completado.")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -375,6 +447,7 @@ if __name__ == "__main__":
 
     events_df = read_events(spark, args.parquet_dir).cache()
     gkg_df      = spark.read.parquet(f"{args.parquet_dir}/gkg")
+    mentions_df = spark.read.parquet(f"{args.parquet_dir}/mentions")
 
     run_tone_source_correlation(events_df, spark)
     run_cameo_distribution(events_df, spark)
@@ -383,8 +456,8 @@ if __name__ == "__main__":
     run_religion_conflict_cluster(events_df, spark)
     run_gkg_themes_continent(gkg_df, spark)
     run_tone_conflict_lag(events_df, spark)
-    run_media_polarization(events_df, spark)
-    run_cooperation_amid_conflict(events_df, spark)
+    run_extreme_tone_events(events_df, spark)
+    run_mention_response_time(events_df, mentions_df, spark)
 
     spark.stop()
     print("═══ analysis_sentiment_actors.py finalizado ═══")
