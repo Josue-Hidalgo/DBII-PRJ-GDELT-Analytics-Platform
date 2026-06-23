@@ -385,57 +385,30 @@ def run_extreme_tone_events(events_df, spark):
     print("✔ Análisis 18 (eventos con tono más extremo) completado.")
 
 
-def run_mention_response_time(events_df, mentions_df, spark):
+def run_top_article_coverage(events_df, spark):
     """
-    Análisis 19 [Extra]: Velocidad de respuesta mediática por país —
-    tiempo promedio (en minutos) entre que ocurre un evento (DATEADDED)
-    y su primera mención registrada (MentionTimeDate).
-    Reemplaza "cooperación entre países en conflicto crónico" porque ese
-    requería >20 eventos de conflicto entre el mismo par de países, umbral
-    que casi nunca se alcanza con pocas horas de datos RAW — la colección
-    salía vacía la mayoría de las corridas. Este análisis usa el mismo
-    cruce events+mentions que ya existe en el pipeline (análisis 17) y
-    siempre tiene datos mientras existan menciones.
+    Análisis 19 [Extra]: Ranking de países por total de artículos que cubren
+    sus eventos (NumArticles), con el promedio de artículos por evento.
+    Reemplaza 'velocidad de respuesta mediática' porque ese análisis daba
+    siempre 0.0 — GDELT cuantiza timestamps en intervalos de 15 minutos,
+    así que event_ts y first_mention_ts caen en el mismo tick siempre.
+    Este análisis funciona con cualquier volumen de datos (incluso 1 ciclo).
     """
-    events_ts = (
+    result = (
         events_df
         .filter(F.col("ActionGeo_CountryCode").isNotNull())
-        .withColumn("event_ts", F.to_timestamp(F.col("DATEADDED"), "yyyyMMddHHmmss"))
-        .filter(F.col("event_ts").isNotNull())
-        .select("GlobalEventID", "ActionGeo_CountryCode", "event_ts")
-        .withColumnRenamed("ActionGeo_CountryCode", "country")
-    )
-
-    first_mention = (
-        mentions_df
-        .withColumn("mention_ts", F.to_timestamp(F.col("MentionTimeDate"), "yyyyMMddHHmmss"))
-        .filter(F.col("mention_ts").isNotNull())
-        .groupBy("GlobalEventID")
-        .agg(F.min("mention_ts").alias("first_mention_ts"))
-    )
-
-    joined = (
-        events_ts
-        .join(first_mention, on="GlobalEventID", how="inner")
-        .withColumn(
-            "response_minutes",
-            (F.col("first_mention_ts").cast("long") - F.col("event_ts").cast("long")) / 60.0
-        )
-        .filter(F.col("response_minutes") >= 0)
-    )
-
-    result = (
-        joined
-        .groupBy("country")
+        .filter(F.col("NumArticles").isNotNull())
+        .groupBy("ActionGeo_CountryCode")
         .agg(
-            F.avg("response_minutes").alias("avg_response_minutes"),
-            F.min("response_minutes").alias("fastest_response_minutes"),
-            F.count("GlobalEventID").alias("sample_size"),
+            F.sum(F.col("NumArticles").cast("int")).alias("total_articles"),
+            F.avg(F.col("NumArticles").cast("double")).alias("avg_articles_per_event"),
+            F.count("GlobalEventID").alias("event_count"),
         )
-        .orderBy("avg_response_minutes")
+        .withColumnRenamed("ActionGeo_CountryCode", "country")
+        .orderBy(F.desc("total_articles"))
     )
-    write_to_mongo(result, "mention_response_time")
-    print("✔ Análisis 19 (velocidad de respuesta mediática) completado.")
+    write_to_mongo(result, "top_article_coverage")
+    print("✔ Análisis 19 (cobertura por artículos) completado.")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -447,7 +420,6 @@ if __name__ == "__main__":
 
     events_df = read_events(spark, args.parquet_dir).cache()
     gkg_df      = spark.read.parquet(f"{args.parquet_dir}/gkg")
-    mentions_df = spark.read.parquet(f"{args.parquet_dir}/mentions")
 
     run_tone_source_correlation(events_df, spark)
     run_cameo_distribution(events_df, spark)
@@ -457,7 +429,7 @@ if __name__ == "__main__":
     run_gkg_themes_continent(gkg_df, spark)
     run_tone_conflict_lag(events_df, spark)
     run_extreme_tone_events(events_df, spark)
-    run_mention_response_time(events_df, mentions_df, spark)
+    run_top_article_coverage(events_df, spark)
 
     spark.stop()
     print("═══ analysis_sentiment_actors.py finalizado ═══")

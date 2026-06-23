@@ -47,29 +47,28 @@
   </div>
 </div>
 
-<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Velocidad de Respuesta Mediática por País</h2>
+<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Ranking de Países por Cobertura de Artículos</h2>
 <p class="subtitle" style="margin-bottom:1rem">
-  Tiempo promedio (en minutos) que tarda en aparecer la primera mención de un evento después de
-  registrado (DATEADDED → MentionTimeDate). Un valor bajo indica que la prensa de ese país reacciona
-  casi en tiempo real; un valor alto sugiere cobertura más lenta o eventos que tardan en hacerse noticia.
+  Total de artículos (NumArticles) que cubren eventos por país — indica qué países generan
+  eventos con mayor amplificación mediática global, independientemente de cuántos eventos ocurran.
 </p>
 <div class="grid grid-2">
   <div class="card">
-    <div class="card-title"><span>#19</span>Países con respuesta mediática más rápida</div>
-    <div class="chart-box"><canvas id="responseChart"></canvas></div>
+    <div class="card-title"><span>#19</span>Países con mayor volumen total de artículos</div>
+    <div class="chart-box"><canvas id="articleChart"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title"><span>#19</span>Tabla de velocidad de respuesta</div>
+    <div class="card-title"><span>#19</span>Tabla de cobertura por artículos</div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>País</th><th>Promedio (min)</th><th>Más rápida (min)</th><th>Muestra</th></tr></thead>
+        <thead><tr><th>País</th><th>Total Artículos</th><th>Avg Art/Evento</th><th>Eventos</th></tr></thead>
         <tbody>
-          {% for row in data.response_time[:15] %}
+          {% for row in data.article_coverage[:15] %}
           <tr>
             <td><span class="badge">{{ row.country }}</span></td>
-            <td>{{ "%.1f"|format(row.avg_response_minutes|float) if row.avg_response_minutes is not none else 'N/A' }}</td>
-            <td style="color:var(--ok)">{{ "%.1f"|format(row.fastest_response_minutes|float) if row.fastest_response_minutes is not none else 'N/A' }}</td>
-            <td>{{ row.sample_size }}</td>
+            <td style="color:var(--accent)">{{ row.total_articles }}</td>
+            <td>{{ "%.1f"|format(row.avg_articles_per_event|float) if row.avg_articles_per_event else 'N/A' }}</td>
+            <td>{{ row.event_count }}</td>
           </tr>
           {% else %}
           <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
@@ -109,15 +108,15 @@
   }
 
   // ─── Chart 2: Velocidad de respuesta por país ───
-  const responseData = {{ data.response_time[:12] | tojson }};
-  if (responseData.length) {
-    new Chart(document.getElementById('responseChart').getContext('2d'), {
+  const articleData = {{ data.article_coverage[:12] | tojson }};
+  if (articleData.length) {
+    new Chart(document.getElementById('articleChart').getContext('2d'), {
       type: 'bar',
       data: {
-        labels: responseData.map(d => d.country),
+        labels: articleData.map(d => d.country),
         datasets: [{
-          label: 'Minutos promedio hasta primera mención',
-          data: responseData.map(d => parseFloat(d.avg_response_minutes) || 0),
+          label: 'Total artículos',
+          data: articleData.map(d => d.total_articles || 0),
           backgroundColor: 'rgba(0,212,255,0.55)',
           borderWidth: 0,
         }]

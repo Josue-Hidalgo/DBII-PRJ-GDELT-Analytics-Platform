@@ -172,12 +172,12 @@ db.extreme_tone_events.createIndex({ tone_extreme_type: 1, AvgTone: 1 });
 db.extreme_tone_events.createIndex({ country: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ANÁLISIS 19 [Extra] — Velocidad de respuesta mediática por país
-// Campos: country, avg_response_minutes, fastest_response_minutes, sample_size
+// ANÁLISIS 19 [Extra] — Ranking de países por cobertura de artículos
+// Campos: country, total_articles, avg_articles_per_event, event_count
 // ─────────────────────────────────────────────────────────────────────────────
-createCollection("mention_response_time", null, "[Extra] Tiempo promedio evento → primera mención, por país");
-db.mention_response_time.createIndex({ avg_response_minutes: 1 });
-db.mention_response_time.createIndex({ country: 1 });
+createCollection("top_article_coverage", null, "[Extra] Países con mayor cobertura total de artículos");
+db.top_article_coverage.createIndex({ total_articles: -1 });
+db.top_article_coverage.createIndex({ country: 1 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // METADATOS — registro de ejecuciones del pipeline

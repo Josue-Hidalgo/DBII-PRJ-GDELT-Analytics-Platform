@@ -131,7 +131,7 @@ def tendencias():
     """Sección: Análisis Extra (análisis 18, 19)."""
     data = {
         "extreme_tone": query("extreme_tone_events", sort=[("AvgTone", 1)], limit=30),
-        "response_time": query("mention_response_time", sort=[("avg_response_minutes", 1)], limit=50),
+        "article_coverage": query("top_article_coverage", sort=[("total_articles", -1)], limit=50),
     }
     return render_template("tendencias.html", data=data)
 
@@ -156,7 +156,7 @@ def api_collection(collection: str):
         "religion_conflict_cluster", "gkg_themes_continent", "top_organizations",
         "tone_conflict_lag", "diplomatic_network", "source_diversity_index",
         "ethnic_conflicts", "breaking_news", "extreme_tone_events",
-        "mention_response_time",
+        "top_article_coverage",
     }
     if collection not in allowed:
         return jsonify({"error": "Colección no encontrada"}), 404
