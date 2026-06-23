@@ -136,6 +136,9 @@ def tendencias():
     return render_template("tendencias.html", data=data)
 
 
+@app.route("/conclusiones")
+def conclusiones():
+    return render_template("conclusiones.html")
 
 
 # ─── API JSON genérica ────────────────────────────────────────────────────────

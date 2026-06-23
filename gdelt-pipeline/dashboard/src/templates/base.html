@@ -185,6 +185,7 @@
     <a href="/actores"    {% if '/actores'    in request.path %}class="active"{% endif %}>Actores</a>
     <a href="/sentimiento"{% if '/sentimiento'in request.path %}class="active"{% endif %}>Sentimiento</a>
     <a href="/tendencias" {% if '/tendencias' in request.path %}class="active"{% endif %}>Tendencias</a>
+    <a href="/conclusiones"{% if '/conclusiones'in request.path%}class="active"{% endif %}>Conclusiones</a>
   </nav>
   <main>
     {% block content %}{% endblock %}

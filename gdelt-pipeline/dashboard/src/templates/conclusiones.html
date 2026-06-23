@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Conclusiones — GDELT{% endblock %}
+{% block content %}
+<h1>// Conclusiones</h1>
+<p class="subtitle">Análisis de datos GDELT — Hallazgos principales del proyecto</p>
+
+<h2><span style="color:var(--accent)">▸</span> Conclusiones del Análisis</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Basado en los datos procesados por el pipeline.
+</p>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>1</span>Patrones Temporales</div>
+    <p style="color: var(--text); line-height: 1.6; font-size: 0.85rem;">
+      El análisis de días de la semana revela patrones en la actividad noticiosa global.
+      Los días laborales tienden a generar más eventos que los fines de semana,
+      lo que sugiere que la cobertura mediática sigue ciclos de trabajo corporativo y gubernamental.
+    </p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>2</span>Intensidad de Conflictos</div>
+    <p style="color: var(--text); line-height: 1.6; font-size: 0.85rem;">
+      El mapa de calor basado en la escala Goldstein muestra regiones con concentraciones
+      persistentes de conflicto material. Los países con mayor actividad conflictiva
+      mantienen patrones estables a lo largo del tiempo analizado.
+    </p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>3</span>Cobertura Mediática</div>
+    <p style="color: var(--text); line-height: 1.6; font-size: 0.85rem;">
+      La correlación entre el tono promedio (AvgTone) y el número de fuentes noticiosas
+      indica que eventos con mayor cobertura tienden a tener tonos más extremos,
+      ya sea positivos o negativos, sugiriendo un sesgo hacia noticias más impactantes.
+    </p>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+  <div class="card-title"><span>NOTA</span></div>
+  <p style="color: var(--muted); line-height: 1.6; font-size: 0.82rem;">
+    Estas conclusiones se basan en el periodo de datos analizado. Para análisis más robustos,
+    se recomienda extender el periodo de retención de datos RAW y ejecutar el pipeline
+    por varios días para capturar tendencias a más largo plazo.
+  </p>
+</div>
+{% endblock %}
