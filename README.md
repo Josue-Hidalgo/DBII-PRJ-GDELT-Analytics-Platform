@@ -70,4 +70,4 @@ docker compose down -v
 
 ## Documentación
 
- - [Documentación Externa](https://docs.google.com/document/d/1nAHviEI59KieZjGjtOoCA8HmAS-5ed8zgQPaiDaC_u4/edit?usp=sharing)
+ - [Documentación Externa](https://drive.google.com/file/d/1XyYYQriiPPLLLeGSzf8cx1mhINdUvjuQ/view?usp=drive_link)
