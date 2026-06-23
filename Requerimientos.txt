@@ -1,0 +1,357 @@
+# Contexto del Proyecto – Tarea Programada #2
+
+## Curso
+
+Bases de Datos II (IC4302)
+Instituto Tecnológico de Costa Rica
+Profesor: Erick Hernández B
+Semestre: Mayo 2026
+
+## Objetivo General
+
+Desarrollar un pipeline de análisis de datos basado en eventos mundiales utilizando información del proyecto GDELT. La solución debe ejecutarse completamente en contenedores y estar compuesta por tres etapas principales:
+
+1. Carga de datos (Loader)
+2. Procesamiento y análisis con Apache Spark
+3. Visualización de resultados almacenados en MongoDB
+
+Los resultados finales deben presentarse mediante una página web o dashboard.
+
+---
+
+# Requisitos de Arquitectura
+
+La solución debe ejecutarse utilizando contenedores Docker.
+
+Como mínimo se requieren:
+
+* 1 contenedor Loader
+* 2 o más contenedores Spark
+* 1 contenedor MongoDB
+* 1 contenedor para la capa de visualización
+
+Herramientas sugeridas:
+
+* Docker / Docker Compose
+* Apache Spark
+* Apache Airflow (opcional)
+* Apache Parquet
+* HDFS (opcional)
+* MongoDB
+* Apache Superset (opcional)
+
+La arquitectura exacta puede variar siempre que cumpla con los requisitos funcionales.
+
+---
+
+# Fuente de Datos
+
+Sitio oficial:
+
+https://www.gdeltproject.org/
+
+Se deben descargar únicamente los archivos generados cada 15 minutos.
+
+Archivos permitidos:
+
+* Events Table
+* Mentions Table
+* GKG (Global Knowledge Graph)
+
+Importante:
+
+* NO descargar el histórico completo.
+* El histórico completo supera los 2.5 TB.
+* Solo se deben descargar ventanas pequeñas de datos recientes.
+
+---
+
+# Loader
+
+## Responsabilidades
+
+El Loader debe:
+
+1. Ejecutarse automáticamente cada 15 minutos.
+2. Descargar los archivos GDELT recientes.
+3. Transformar los datos si es necesario.
+4. Guardarlos en:
+
+   * Apache Parquet
+   * HDFS
+   * o ambos
+
+## Consideraciones
+
+* Los datos RAW son muy pesados.
+* Se recomienda conservar únicamente entre 1 hora y 24 horas de datos crudos.
+* Los datos viejos pueden eliminarse después de ser procesados.
+
+---
+
+# Procesamiento con Spark
+
+Los análisis deben ejecutarse utilizando Apache Spark leyendo desde:
+
+* HDFS
+* Parquet
+
+Los resultados NO deben calcularse en tiempo real desde el dashboard.
+
+Todos los resultados deben ser calculados previamente y almacenados en MongoDB.
+
+---
+
+# Análisis Obligatorios
+
+## 1. Mapa de calor de intensidad de conflictos por país por día
+
+Usar Goldstein Scale para medir intensidad.
+
+---
+
+## 2. Top 10 países que generan más eventos noticiosos por día
+
+---
+
+## 3. Correlación entre AvgTone y número de fuentes noticiosas
+
+Determinar relación entre:
+
+* AvgTone
+* Cantidad de fuentes que cubren el evento
+
+---
+
+## 4. Distribución de tipos de eventos CAMEO por región del mundo
+
+---
+
+## 5. Matriz de interacción entre tipos de actores
+
+Ejemplos:
+
+* Gobierno vs Gobierno
+* Gobierno vs Militar
+* Militar vs Rebeldes
+
+---
+
+## 6. Países con mayor cobertura mediática por evento
+
+Métrica:
+
+Menciones / Eventos
+
+---
+
+## 7. Tendencia de sentimiento por país a lo largo del tiempo
+
+Utilizar promedio móvil de AvgTone.
+
+---
+
+## 8. Conflictos entre actores
+
+Determinar pares de países que entran en conflicto con mayor frecuencia.
+
+---
+
+## 9. Detección de escalada de eventos
+
+Eventos con crecimiento acelerado de menciones en 24 horas.
+
+---
+
+## 10. Agrupamiento de eventos de conflicto basados en religión
+
+Agrupar por región geográfica.
+
+---
+
+## 11. Principales temas extraídos por GKG
+
+Agrupar:
+
+* Continente
+* Año
+
+---
+
+## 12. Organizaciones más mencionadas globalmente por día
+
+---
+
+## 13. Análisis de rezago
+
+Pregunta:
+
+¿El tono mediático de hoy predice conflictos mañana?
+
+---
+
+## 14. Grafo de interacciones diplomáticas y conflictos
+
+Representar relaciones entre países.
+
+---
+
+## 15. Índice de diversidad de fuentes por país
+
+Cantidad de medios distintos que cubren eventos de un país.
+
+---
+
+## 16. Frecuencia de conflictos por etnia
+
+Determinar grupos étnicos más frecuentes en eventos conflictivos.
+
+---
+
+## 17. Detección de noticias de última hora
+
+Eventos que pasan de:
+
+0 menciones → más de 100 menciones
+
+en menos de 1 hora.
+
+---
+
+## 18. Dos análisis adicionales
+
+El equipo debe proponer e implementar dos análisis propios.
+
+Ejemplos posibles:
+
+* Países con mayor crecimiento de cobertura mediática.
+* Redes de influencia internacional.
+* Evolución de conflictos por continente.
+* Predicción simple de intensidad de conflictos.
+
+---
+
+# MongoDB
+
+## Objetivo
+
+MongoDB almacenará únicamente resultados procesados.
+
+NO debe almacenar datos RAW de GDELT.
+
+## Diseño
+
+El equipo debe diseñar:
+
+* Colecciones
+* Documentos
+* Índices
+
+Ejemplo:
+
+heatmap_conflicts
+top_countries
+tone_correlation
+actor_interactions
+religion_clusters
+breaking_news
+etc.
+
+---
+
+# Dashboard / Visualización
+
+Se debe construir una interfaz web que permita visualizar todos los análisis.
+
+Puede implementarse con:
+
+* Apache Superset
+* React
+* Angular
+* Vue
+* Flask
+* Node.js
+* Otra tecnología similar
+
+## Requisitos
+
+* Mostrar todos los análisis.
+* Incluir tablas y gráficos.
+* No se requieren funcionalidades avanzadas.
+* No se requieren drill-downs complejos.
+
+---
+
+# Conclusiones
+
+El grupo debe generar al menos 3 conclusiones obtenidas a partir de los datos procesados.
+
+Las conclusiones deben basarse en evidencia observada en los análisis.
+
+---
+
+# Entregables
+
+## Código Fuente
+
+* Dockerfiles
+* Docker Compose
+* Scripts Loader
+* Jobs Spark
+* Dashboard
+
+## Documentación
+
+Debe incluir:
+
+### Arquitectura
+
+* Diagrama de componentes
+* Flujo de datos
+
+### Bases de Datos
+
+* Modelo MongoDB
+* Diseño de colecciones
+
+### Tecnologías Utilizadas
+
+* Justificación de cada herramienta
+
+### Uso de IA
+
+Documentar:
+
+* Qué herramientas de IA se utilizaron
+* Para qué se utilizaron
+* Cómo contribuyeron al desarrollo
+
+---
+
+# Posible Arquitectura Recomendada
+
+GDELT
+↓
+Loader (Python)
+↓
+Parquet
+↓
+Spark Cluster
+↓
+Resultados Agregados
+↓
+MongoDB
+↓
+Dashboard (Superset o React)
+
+---
+
+# Restricciones Importantes
+
+* Todo debe ejecutarse en contenedores.
+* Spark debe realizar los análisis.
+* MongoDB solo almacena resultados.
+* El dashboard solo consulta MongoDB.
+* Los datos deben descargarse cada 15 minutos.
+* No descargar el histórico completo de GDELT.
+* Todos los análisis deben estar precalculados.

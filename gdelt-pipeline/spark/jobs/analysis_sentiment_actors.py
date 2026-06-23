@@ -10,7 +10,7 @@ Análisis incluidos:
  11.  Principales temas GKG por continente por año
  13.  Análisis de rezago: ¿el tono de hoy predice conflictos mañana?
  18.  [Extra] Top eventos con tono más extremo (positivo/negativo) del periodo
- 19.  [Extra] Velocidad de respuesta mediática: tiempo evento → primera mención por país
+ 19.  [Extra] Días de la semana con más actividad noticiosa
 
 MongoDB schemas:
   tone_source_correlation   → {country, date, avg_tone, avg_sources, correlation}
@@ -21,7 +21,7 @@ MongoDB schemas:
   gkg_themes_continent      → {theme, continent, year, mention_count, rank}
   tone_conflict_lag         → {country, date, today_avg_tone, tomorrow_conflict_count}
   extreme_tone_events       → {GlobalEventID, country, EventRootCode, QuadClass, AvgTone, NumMentions, tone_extreme_type}
-  mention_response_time     → {country, avg_response_minutes, fastest_response_minutes, sample_size}
+  weekday_activity          → {weekday, weekday_name, event_count}
 """
 
 from pyspark.sql import functions as F
@@ -385,57 +385,39 @@ def run_extreme_tone_events(events_df, spark):
     print("✔ Análisis 18 (eventos con tono más extremo) completado.")
 
 
-def run_mention_response_time(events_df, mentions_df, spark):
+def run_weekday_activity(events_df, spark):
     """
-    Análisis 19 [Extra]: Velocidad de respuesta mediática por país —
-    tiempo promedio (en minutos) entre que ocurre un evento (DATEADDED)
-    y su primera mención registrada (MentionTimeDate).
-    Reemplaza "cooperación entre países en conflicto crónico" porque ese
-    requería >20 eventos de conflicto entre el mismo par de países, umbral
-    que casi nunca se alcanza con pocas horas de datos RAW — la colección
-    salía vacía la mayoría de las corridas. Este análisis usa el mismo
-    cruce events+mentions que ya existe en el pipeline (análisis 17) y
-    siempre tiene datos mientras existan menciones.
+    Análisis 19 [Extra]: Días de la semana con más actividad noticiosa.
+    Extrae el día de la semana de cada evento, cuenta eventos y agrupa por día.
     """
-    events_ts = (
-        events_df
-        .filter(F.col("ActionGeo_CountryCode").isNotNull())
-        .withColumn("event_ts", F.to_timestamp(F.col("DATEADDED"), "yyyyMMddHHmmss"))
-        .filter(F.col("event_ts").isNotNull())
-        .select("GlobalEventID", "ActionGeo_CountryCode", "event_ts")
-        .withColumnRenamed("ActionGeo_CountryCode", "country")
-    )
+    weekday_names = {
+        1: "Lunes",
+        2: "Martes",
+        3: "Miércoles",
+        4: "Jueves",
+        5: "Viernes",
+        6: "Sábado",
+        7: "Domingo"
+    }
 
-    first_mention = (
-        mentions_df
-        .withColumn("mention_ts", F.to_timestamp(F.col("MentionTimeDate"), "yyyyMMddHHmmss"))
-        .filter(F.col("mention_ts").isNotNull())
-        .groupBy("GlobalEventID")
-        .agg(F.min("mention_ts").alias("first_mention_ts"))
-    )
-
-    joined = (
-        events_ts
-        .join(first_mention, on="GlobalEventID", how="inner")
-        .withColumn(
-            "response_minutes",
-            (F.col("first_mention_ts").cast("long") - F.col("event_ts").cast("long")) / 60.0
-        )
-        .filter(F.col("response_minutes") >= 0)
+    weekday_map_df = spark.createDataFrame(
+        [(k, v) for k, v in weekday_names.items()],
+        ["weekday_num", "weekday_name"]
     )
 
     result = (
-        joined
-        .groupBy("country")
-        .agg(
-            F.avg("response_minutes").alias("avg_response_minutes"),
-            F.min("response_minutes").alias("fastest_response_minutes"),
-            F.count("GlobalEventID").alias("sample_size"),
-        )
-        .orderBy("avg_response_minutes")
+        events_df
+        .withColumn("event_ts", F.to_timestamp(F.col("DATEADDED"), "yyyyMMddHHmmss"))
+        .filter(F.col("event_ts").isNotNull())
+        .withColumn("weekday_num", F.dayofweek(F.col("event_ts")))
+        .groupBy("weekday_num")
+        .agg(F.count("GlobalEventID").alias("event_count"))
+        .join(weekday_map_df, on="weekday_num", how="inner")
+        .select("weekday_num", "weekday_name", "event_count")
+        .orderBy("weekday_num")
     )
-    write_to_mongo(result, "mention_response_time")
-    print("✔ Análisis 19 (velocidad de respuesta mediática) completado.")
+    write_to_mongo(result, "weekday_activity")
+    print("✔ Análisis 19 (actividad por día de la semana) completado.")
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
@@ -457,7 +439,7 @@ if __name__ == "__main__":
     run_gkg_themes_continent(gkg_df, spark)
     run_tone_conflict_lag(events_df, spark)
     run_extreme_tone_events(events_df, spark)
-    run_mention_response_time(events_df, mentions_df, spark)
+    run_weekday_activity(events_df, spark)
 
     spark.stop()
     print("═══ analysis_sentiment_actors.py finalizado ═══")

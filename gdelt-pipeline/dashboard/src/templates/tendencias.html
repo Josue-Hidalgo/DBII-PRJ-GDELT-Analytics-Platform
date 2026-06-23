@@ -2,7 +2,7 @@
 {% block title %}Tendencias Extra — GDELT{% endblock %}
 {% block content %}
 <h1>// Análisis Extra</h1>
-<p class="subtitle">Análisis 18, 19 — Eventos con tono más extremo · Velocidad de respuesta mediática por país</p>
+<p class="subtitle">Análisis 18, 19 — Eventos con tono más extremo · Días de la semana con más actividad noticiosa</p>
 
 <h2><span style="color:var(--accent)">▸</span> Análisis 18 — Eventos con Tono Más Extremo del Periodo</h2>
 <p class="subtitle" style="margin-bottom:1rem">
@@ -47,32 +47,29 @@
   </div>
 </div>
 
-<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Velocidad de Respuesta Mediática por País</h2>
+<h2 style="margin-top:2rem"><span style="color:var(--accent)">▸</span> Análisis 19 — Días de la Semana con Más Actividad Noticiosa</h2>
 <p class="subtitle" style="margin-bottom:1rem">
-  Tiempo promedio (en minutos) que tarda en aparecer la primera mención de un evento después de
-  registrado (DATEADDED → MentionTimeDate). Un valor bajo indica que la prensa de ese país reacciona
-  casi en tiempo real; un valor alto sugiere cobertura más lenta o eventos que tardan en hacerse noticia.
+  Distribución de eventos de GDELT por día de la semana. Identifica qué días generan más
+  actividad noticiosa globalmente. Útil para entender patrones temporales en la cobertura mediática.
 </p>
 <div class="grid grid-2">
   <div class="card">
-    <div class="card-title"><span>#19</span>Países con respuesta mediática más rápida</div>
-    <div class="chart-box"><canvas id="responseChart"></canvas></div>
+    <div class="card-title"><span>#19</span>Eventos por día de la semana</div>
+    <div class="chart-box"><canvas id="weekdayChart"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title"><span>#19</span>Tabla de velocidad de respuesta</div>
+    <div class="card-title"><span>#19</span>Tabla de actividad por día</div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>País</th><th>Promedio (min)</th><th>Más rápida (min)</th><th>Muestra</th></tr></thead>
+        <thead><tr><th>Día</th><th>Eventos</th></tr></thead>
         <tbody>
-          {% for row in data.response_time[:15] %}
+          {% for row in data.weekday_activity %}
           <tr>
-            <td><span class="badge">{{ row.country }}</span></td>
-            <td>{{ "%.1f"|format(row.avg_response_minutes|float) if row.avg_response_minutes is not none else 'N/A' }}</td>
-            <td style="color:var(--ok)">{{ "%.1f"|format(row.fastest_response_minutes|float) if row.fastest_response_minutes is not none else 'N/A' }}</td>
-            <td>{{ row.sample_size }}</td>
+            <td><span class="badge">{{ row.weekday_name }}</span></td>
+            <td style="color:var(--accent);font-weight:bold">{{ "{:,}".format(row.event_count|int) if row.event_count is not none else 'N/A' }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+          <tr><td colspan="2" style="color:var(--muted)">Sin datos aún — ejecuta el pipeline</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -108,16 +105,16 @@
     });
   }
 
-  // ─── Chart 2: Velocidad de respuesta por país ───
-  const responseData = {{ data.response_time[:12] | tojson }};
-  if (responseData.length) {
-    new Chart(document.getElementById('responseChart').getContext('2d'), {
+  // ─── Chart 2: Actividad por día de la semana ───
+  const weekdayData = {{ data.weekday_activity | tojson }};
+  if (weekdayData.length) {
+    new Chart(document.getElementById('weekdayChart').getContext('2d'), {
       type: 'bar',
       data: {
-        labels: responseData.map(d => d.country),
+        labels: weekdayData.map(d => d.weekday_name),
         datasets: [{
-          label: 'Minutos promedio hasta primera mención',
-          data: responseData.map(d => parseFloat(d.avg_response_minutes) || 0),
+          label: 'Eventos',
+          data: weekdayData.map(d => parseInt(d.event_count) || 0),
           backgroundColor: 'rgba(0,212,255,0.55)',
           borderWidth: 0,
         }]
@@ -126,7 +123,7 @@
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#506070', font: { size: 10 } }, grid: { color: '#1e2d40' } },
+          x: { ticks: { color: '#506070', font: { size: 11 } }, grid: { color: '#1e2d40' } },
           y: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
         }
       }

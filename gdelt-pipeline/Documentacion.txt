@@ -1,0 +1,93 @@
+# Documentación del Proyecto - GDELT Analytics Platform
+
+## Contexto
+- Curso: Bases de Datos II (IC4302)
+- Instituto Tecnológico de Costa Rica
+- Profesor: Erick Hernández B
+- Semestre: Mayo 2026
+
+## Objetivo General
+Desarrollar pipeline de análisis de datos basado en eventos mundiales utilizando GDELT. Ejecución en contenedores con tres etapas:
+1. Carga de datos (Loader)
+2. Procesamiento con Apache Spark
+3. Visualización en MongoDB
+
+## Arquitectura
+- Ejecución en Docker
+- Contenedores mínimos: 1 Loader, 2+ Spark, 1 MongoDB, 1 Visualización
+- Herramientas: Docker Compose, Apache Spark, Parquet, MongoDB, Superset (opcional)
+
+## Fuente de Datos
+- Sitio: https://www.gdeltproject.org/
+- Archivos cada 15 minutos: Events Table, Mentions Table, GKG
+- Solo datos recientes (no histórico completo >2.5 TB)
+
+## Loader
+Responsabilidades:
+- Ejecución automática cada 15 minutos
+- Descargar archivos GDELT recientes
+- Transformar datos si necesario
+- Guardar en Parquet/HDFS
+- Mantener 1-24 horas de datos crudos
+
+## Procesamiento Spark
+- Leer desde HDFS/Parquet
+- Resultados precalculados (no en tiempo real)
+- Almacenar en MongoDB
+
+## Análisis Obligatorios (18)
+1. Mapa de calor de intensidad de conflictos por país/día (Goldstein Scale)
+2. Top 10 países con más eventos noticiosos por día
+3. Correlación AvgTone vs número de fuentes
+4. Distribución tipos CAMEO por región
+5. Matriz interacción tipos de actores
+6. Países con mayor cobertura mediática (Menciones/Eventos)
+7. Tendencia sentimiento por país (promedio móvil AvgTone)
+8. Conflictos entre actores (pares de países)
+9. Detección escalada eventos (crecimiento menciones 24h)
+10. Agrupamiento eventos conflicto por religión/región
+11. Principales temas GKG por continente/año
+12. Organizaciones más mencionadas globalmente por día
+13. Análisis de rezago (tono hoy predice conflictos mañana)
+14. Grafo interacciones diplomáticas y conflictos
+15. Índice diversidad fuentes por país
+16. Frecuencia conflictos por etnia
+17. Detección noticias última hora (0→100 menciones en <1h)
+18. Dos análisis adicionales propios
+
+## MongoDB
+- Solo resultados procesados
+- No datos RAW
+- Diseño: colecciones, documentos, índices
+- Ejemplos: heatmap_conflicts, top_countries, tone_correlation, actor_interactions, religion_clusters, breaking_news
+
+## Dashboard
+- Interfaz web para visualizar análisis
+- Tecnologías: Superset, React, Angular, Vue, Flask, Node.js
+- Requisitos: mostrar todos análisis, tablas y gráficos
+
+## Conclusiones
+- Mínimo 3 conclusiones basadas en evidencia observada
+
+## Entregables
+Código Fuente:
+- Dockerfiles
+- Docker Compose
+- Scripts Loader
+- Jobs Spark
+- Dashboard
+
+Documentación:
+- Arquitectura (diagrama componentes, flujo datos)
+- Bases de Datos (modelo MongoDB, diseño colecciones)
+- Tecnologías Utilizadas (justificación)
+- Uso de IA (herramientas, propósito, contribución)
+
+## Restricciones
+- Todo en contenedores
+- Spark realiza análisis
+- MongoDB solo resultados
+- Dashboard solo consulta MongoDB
+- Datos cada 15 minutos
+- No descargar histórico completo
+- Análisis precalculados

@@ -1,0 +1,68 @@
+# Estado de Implementación - GDELT Analytics Platform
+
+## Implementado
+
+### Arquitectura
+- Docker Compose con todos los servicios
+- HDFS NameNode y DataNode
+- Loader (Python) con ejecución cada 15 minutos
+- Spark Cluster (Master + 2 Workers)
+- MongoDB 7.0
+- Dashboard Flask
+- Airflow (opcional, con profile)
+
+### Análisis Obligatorios (18/18)
+1. ✓ Mapa de calor intensidad conflictos por país/día (Goldstein Scale)
+2. ✓ Top 10 países con más eventos noticiosos por día
+3. ✓ Correlación AvgTone vs número de fuentes
+4. ✓ Distribución tipos CAMEO por región
+5. ✓ Matriz interacción tipos de actores
+6. ✓ Países con mayor cobertura mediática (Menciones/Eventos)
+7. ✓ Tendencia sentimiento por país (promedio móvil AvgTone)
+8. ✓ Conflictos entre actores (pares de países)
+9. ✓ Detección escalada eventos (crecimiento menciones 24h)
+10. ✓ Agrupamiento eventos conflicto por religión/región
+11. ✓ Principales temas GKG por continente/año
+12. ✓ Organizaciones más mencionadas globalmente por día
+13. ✓ Análisis de rezago (tono hoy predice conflictos mañana)
+14. ✓ Grafo interacciones diplomáticas y conflictos
+15. ✓ Índice diversidad fuentes por país
+16. ✓ Frecuencia conflictos por etnia
+17. ✓ Detección noticias última hora (0→100 menciones en <1h)
+18. ✓ Dos análisis adicionales propios:
+    - Eventos con tono más extremo (positivo/negativo)
+    - Días de la semana con más actividad noticiosa
+
+### Dashboard
+- Flask app con rutas para todos los análisis
+- 5 secciones: Conflictos, Cobertura, Actores, Sentimiento, Tendencias
+- API JSON genérica para todas las colecciones
+- Templates HTML para visualización
+- Endpoint de health check
+
+### MongoDB
+- 17 colecciones con resultados procesados
+- Scripts de inicialización en mongo/init/
+
+### Loader
+- Descarga Events, Mentions, GKG cada 15 minutos
+- Transformación a Parquet
+- Retención configurable de datos RAW (1-24 horas)
+
+## Falta
+
+### Documentación
+- Diagrama de componentes de arquitectura
+- Flujo de datos
+- Modelo MongoDB detallado
+- Diseño de colecciones con índices
+- Justificación de tecnologías utilizadas
+- Documentación de uso de IA (herramientas, propósito, contribución)
+
+### Conclusiones
+- Mínimo 3 conclusiones basadas en evidencia observada
+- Sección /conclusiones en dashboard existe pero sin contenido
+
+### Orquestación
+- Airflow DAG existe pero puede requerir configuración adicional
+- No verificado si los DAGs están activos/en producción
