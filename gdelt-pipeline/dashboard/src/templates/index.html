@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}GDELT — Inicio{% endblock %}
+{% block content %}
+<h1>// GDELT World Event Analysis</h1>
+<p class="subtitle">Pipeline de análisis de eventos mundiales — IC4302 Tarea Programada #2</p>
+
+<div class="stat-row">
+  {% for name, count in stats.items() %}
+  <div class="stat">
+    <div class="stat-label">{{ name | replace("_", " ") }}</div>
+    <div class="stat-value">{{ "{:,}".format(count) }}</div>
+  </div>
+  {% else %}
+  <div class="stat">
+    <div class="stat-label">Estado</div>
+    <div class="stat-value" style="font-size:1rem;color:var(--warn)">Sin datos</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>#</span>Arquitectura del Pipeline</div>
+    <table>
+      <tr><td><span class="badge">Loader</span></td><td>Descarga GDELT cada 15 min → Parquet</td></tr>
+      <tr><td><span class="badge">Spark</span></td><td>Análisis distribuido (master + 2 workers)</td></tr>
+      <tr><td><span class="badge">MongoDB</span></td><td>Resultados pre-calculados (19 análisis)</td></tr>
+      <tr><td><span class="badge">Dashboard</span></td><td>Visualización Flask (este portal)</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#</span>Secciones de Análisis</div>
+    <table>
+      <tr><td><a href="/conflictos" style="color:var(--accent)">Conflictos</a></td><td>Análisis 1, 8, 9, 14, 16</td></tr>
+      <tr><td><a href="/cobertura"  style="color:var(--accent)">Cobertura Mediática</a></td><td>Análisis 2, 6, 12, 15, 17</td></tr>
+      <tr><td><a href="/actores"    style="color:var(--accent)">Actores</a></td><td>Análisis 4, 5, 10</td></tr>
+      <tr><td><a href="/sentimiento"style="color:var(--accent)">Sentimiento</a></td><td>Análisis 3, 7, 11, 13</td></tr>
+      <tr><td><a href="/tendencias" style="color:var(--accent)">Tendencias Extra</a></td><td>Análisis 18, 19</td></tr>
+    </table>
+  </div>
+</div>
+{% endblock %}

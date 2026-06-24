@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Sentimiento — GDELT{% endblock %}
+{% block content %}
+<h1>// Sentimiento y Tendencias</h1>
+<p class="subtitle">Análisis 3, 7, 11, 13 — Correlación tono/fuentes · Tendencia AvgTone · Temas GKG · Rezago tono→conflicto</p>
+
+<h2><span style="color:var(--accent)">▸</span> Análisis 7 — Tendencia de Sentimiento por País (Promedio Móvil 3d)</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  AvgTone diario por país suavizado con una ventana móvil de 3 días. para que la tendencia
+  sea visible incluso con la ventana corta de datos retenidos por el loader (ver RAW_RETENTION_HOURS).
+  Valores positivos indican cobertura mediática más favorable; negativos, más hostil.
+</p>
+<div class="card">
+  <div class="card-title"><span>#7</span>AvgTone y Moving Average 3 días — top países</div>
+  <div class="chart-box" style="height:320px"><canvas id="sentimentChart"></canvas></div>
+</div>
+
+<div class="grid grid-2" style="margin-top:1.25rem">
+  <div class="card">
+    <div class="card-title"><span>#3</span>Correlación AvgTone vs. NumSources</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Correlación de Pearson entre el tono promedio y el número de fuentes que cubren un evento.
+      Cercano a +1: a más fuentes, tono más positivo. Cercano a -1: a más fuentes, tono más negativo.
+      Cercano a 0: no hay relación clara entre cobertura y tono.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Fecha</th><th>Tono Avg</th><th>Fuentes Avg</th><th>Correlación</th></tr></thead>
+        <tbody>
+          {% for row in data.correlation[:15] %}
+          <tr>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ row.date }}</td>
+            <td>{{ "%.2f"|format(row.avg_tone|float) if row.avg_tone else 'N/A' }}</td>
+            <td>{{ "%.1f"|format(row.avg_sources|float) if row.avg_sources else 'N/A' }}</td>
+            <td><span class="badge {% if row.tone_sources_correlation and row.tone_sources_correlation|float > 0.5 %}badge-gold{% endif %}">
+              {{ "%.3f"|format(row.tone_sources_correlation|float) if row.tone_sources_correlation else 'N/A' }}
+            </span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#13</span>Rezago: Tono de Hoy → Conflictos de Mañana</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+      Compara el tono mediático promedio de un país en un día con la cantidad de eventos de
+      conflicto (QuadClass ≥ 3) registrados al día siguiente — busca indicios de que el tono
+      de hoy anticipe escalada de conflicto mañana.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Fecha</th><th>Tono Hoy</th><th>Conflictos Hoy</th><th>Conflictos Mañana</th></tr></thead>
+        <tbody>
+          {% for row in data.lag[:12] %}
+          <tr>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ row.date }}</td>
+            <td>{{ "%.2f"|format(row.today_avg_tone|float) if row.today_avg_tone else 'N/A' }}</td>
+            <td>{{ row.today_conflict_count }}</td>
+            <td>{{ row.tomorrow_conflict_count }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1.25rem">
+  <div class="card-title"><span>#11</span>Top Temas GKG por Continente y Año</div>
+  <p style="color:var(--muted); font-size:0.78rem; margin-bottom:0.75rem; line-height:1.6">
+    Temas extraídos del campo V2Themes del Global Knowledge Graph (GKG), agrupados por continente
+    de origen y año, mostrando los 10 temas más mencionados de cada combinación.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tema</th><th>Continente</th><th>Año</th><th>Menciones</th><th>Rank</th></tr></thead>
+      <tbody>
+        {% for row in data.gkg_themes[:20] %}
+        <tr>
+          <td>{{ row.theme }}</td>
+          <td>{{ row.continent }}</td>
+          <td>{{ row.year }}</td>
+          <td>{{ row.mention_count }}</td>
+          <td><span class="badge">{{ row.rank }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const trendData = {{ data.trend | tojson }};
+  // Tomar los primeros 3 países con datos
+  const countries = [...new Set(trendData.map(d => d.country))].slice(0, 3);
+  const colors = ['#00d4ff', '#ff3860', '#00e676'];
+  const datasets = countries.map((c, i) => {
+    const pts = trendData.filter(d => d.country === c).slice(-30);
+    return {
+      label: c,
+      data: pts.map(d => ({ x: String(d.date), y: parseFloat(d.moving_avg_3d) || 0 })),
+      borderColor: colors[i], backgroundColor: 'transparent',
+      tension: 0.3, pointRadius: 2,
+    };
+  });
+  if (datasets.length) {
+    new Chart(document.getElementById('sentimentChart').getContext('2d'), {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        parsing: false,
+        plugins: { legend: { labels: { color: '#c8d8e8' } } },
+        scales: {
+          x: { type: 'category', ticks: { color: '#506070', maxRotation: 45 }, grid: { color: '#1e2d40' } },
+          y: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

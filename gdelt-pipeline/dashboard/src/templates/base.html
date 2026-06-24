@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}GDELT — Análisis de Eventos Mundiales{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:        #080c10;
+      --surface:   #0f1520;
+      --border:    #1e2d40;
+      --accent:    #00d4ff;
+      --danger:    #ff3860;
+      --warn:      #ffcc00;
+      --ok:        #00e676;
+      --text:      #c8d8e8;
+      --muted:     #506070;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── NAV ─────────────────────────────────────────────────── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-decoration: none;
+      margin-right: 2rem;
+      white-space: nowrap;
+    }
+    .nav-brand span { color: var(--muted); }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0 1rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ─── MAIN ────────────────────────────────────────────────── */
+    main { flex: 1; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+    h1 {
+      font-family: var(--font-mono);
+      font-size: 1.4rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .subtitle { color: var(--muted); font-size: 0.82rem; margin-bottom: 2rem; }
+
+    /* ─── CARDS ───────────────────────────────────────────────── */
+    .grid { display: grid; gap: 1.25rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem;
+    }
+    .card-title {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+    .card-title span { color: var(--accent); margin-right: 0.4em; }
+
+    /* ─── STAT PILLS ──────────────────────────────────────────── */
+    .stat-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.75rem 1.25rem;
+      min-width: 140px;
+    }
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .stat-value { font-family: var(--font-mono); font-size: 1.6rem; color: var(--accent); margin-top: 0.2rem; }
+
+    /* ─── TABLES ──────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th {
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid rgba(30,45,64,0.5);
+      color: var(--text);
+    }
+    tr:hover td { background: rgba(0,212,255,0.04); }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 2px;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      background: rgba(0,212,255,0.12);
+      color: var(--accent);
+    }
+    .badge-red  { background: rgba(255,56,96,0.15); color: var(--danger); }
+    .badge-gold { background: rgba(255,204,0,0.12); color: var(--warn); }
+
+    /* ─── CHART CONTAINERS ────────────────────────────────────── */
+    .chart-box { position: relative; height: 280px; }
+
+    /* ─── FOOTER ──────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      border-top: 1px solid var(--border);
+      letter-spacing: 0.05em;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <a href="/" class="nav-brand">GDELT<span>/</span>IC4302</a>
+    <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Inicio</a>
+    <a href="/conflictos" {% if '/conflictos' in request.path %}class="active"{% endif %}>Conflictos</a>
+    <a href="/cobertura"  {% if '/cobertura'  in request.path %}class="active"{% endif %}>Cobertura</a>
+    <a href="/actores"    {% if '/actores'    in request.path %}class="active"{% endif %}>Actores</a>
+    <a href="/sentimiento"{% if '/sentimiento'in request.path %}class="active"{% endif %}>Sentimiento</a>
+    <a href="/tendencias" {% if '/tendencias' in request.path %}class="active"{% endif %}>Tendencias</a>
+    <a href="/conclusiones"{% if '/conclusiones'in request.path%}class="active"{% endif %}>Conclusiones</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <footer>IC4302 Bases de Datos II · Tarea Programada #2 · GDELT World Event Analysis Pipeline</footer>
+</body>
+</html>

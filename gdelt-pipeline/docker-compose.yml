@@ -1,0 +1,194 @@
+version: "3.9"
+
+networks:
+  gdelt-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  parquet-data:
+  hdfs-namenode:
+  hdfs-datanode:
+
+services:
+
+  # ─────────────────────────────────────────
+  # HDFS NameNode (almacenamiento intermedio)
+  # ─────────────────────────────────────────
+  hdfs-namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-namenode
+    restart: unless-stopped
+    environment:
+      CLUSTER_NAME: gdelt-cluster
+      CORE_CONF_fs_defaultFS: hdfs://hdfs-namenode:9000
+    ports:
+      - "${HDFS_NAMENODE_UI_PORT:-9870}:9870"
+      - "9000:9000"
+    volumes:
+      - hdfs-namenode:/hadoop/dfs/name
+    networks:
+      - gdelt-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9870"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  hdfs-datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-datanode
+    restart: unless-stopped
+    environment:
+      SERVICE_PRECONDITION: "hdfs-namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://hdfs-namenode:9000
+    volumes:
+      - hdfs-datanode:/hadoop/dfs/data
+    networks:
+      - gdelt-net
+    depends_on:
+      hdfs-namenode:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  # LOADER — descarga GDELT cada 15 minutos
+  # ─────────────────────────────────────────
+  loader:
+    build:
+      context: ./loader
+      dockerfile: Dockerfile
+    container_name: gdelt-loader
+    restart: unless-stopped
+    environment:
+      LOADER_INTERVAL_MINUTES: ${LOADER_INTERVAL_MINUTES:-15}
+      RAW_RETENTION_HOURS: ${RAW_RETENTION_HOURS:-1}
+      HDFS_URL: hdfs://hdfs-namenode:9000
+      PARQUET_OUTPUT_DIR: ${PARQUET_OUTPUT_DIR:-/data/parquet}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - parquet-data:/data/parquet
+    networks:
+      - gdelt-net
+    depends_on:
+      hdfs-namenode:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  # SPARK MASTER
+  # ─────────────────────────────────────────
+  spark-master:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-master
+    restart: unless-stopped
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: ${SPARK_MASTER_PORT:-7077}
+      SPARK_MASTER_WEBUI_PORT: ${SPARK_MASTER_WEBUI_PORT:-8080}
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=admin
+      MONGO_DB: ${MONGO_DB:-gdelt}
+      PARQUET_INPUT_DIR: ${PARQUET_OUTPUT_DIR:-/data/parquet}
+    ports:
+      - "${SPARK_MASTER_WEBUI_PORT:-8080}:8080"
+      - "${SPARK_MASTER_PORT:-7077}:7077"
+    volumes:
+      - parquet-data:/data/parquet
+      - ./spark/jobs:/opt/spark-jobs
+    networks:
+      - gdelt-net
+    depends_on:
+      - mongodb
+
+  spark-worker:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2g}
+      SPARK_MASTER: spark://spark-master:7077
+    volumes:
+      - parquet-data:/data/parquet
+    networks:
+      - gdelt-net
+    depends_on:
+      - spark-master
+    deploy:
+      replicas: ${SPARK_WORKER_REPLICAS:-2}
+
+  # ─────────────────────────────────────────
+  # MONGODB
+  # ─────────────────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: gdelt-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-gdelt_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-gdelt}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo/init:/docker-entrypoint-initdb.d
+    networks:
+      - gdelt-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # DASHBOARD
+  # ─────────────────────────────────────────
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: gdelt-dashboard
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DB}?authSource=admin
+      MONGO_DB: ${MONGO_DB:-gdelt}
+      DASHBOARD_PORT: ${DASHBOARD_PORT:-5000}
+      SECRET_KEY: ${DASHBOARD_SECRET_KEY:-dev-secret-change-in-prod}
+    ports:
+      - "${DASHBOARD_PORT:-5000}:5000"
+    networks:
+      - gdelt-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  # AIRFLOW (opcional — orquestación)
+  # ─────────────────────────────────────────
+  airflow:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: gdelt-airflow
+    restart: unless-stopped
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      SPARK_MASTER: spark://spark-master:7077
+      LOADER_INTERVAL_MINUTES: ${LOADER_INTERVAL_MINUTES:-15}
+    ports:
+      - "${AIRFLOW_PORT:-8081}:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    networks:
+      - gdelt-net
+    depends_on:
+      - spark-master
+      - loader
+    profiles:
+      - airflow   # activar con: docker compose --profile airflow up

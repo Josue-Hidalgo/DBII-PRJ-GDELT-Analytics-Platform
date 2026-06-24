@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Conflictos — GDELT{% endblock %}
+{% block content %}
+<h1>// Análisis de Conflictos</h1>
+<p class="subtitle">Análisis 1, 8, 9, 14, 16 — Intensidad Goldstein · Pares en conflicto · Escalada · Red diplomática · Etnias</p>
+
+<h2><span style="color:var(--danger)">▸</span> Análisis 1 — Mapa de Calor de Conflictos por País/Día</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  GoldsteinScale mide cada evento de -10 (máximo conflicto) a +10 (máxima cooperación).
+  Aquí se promedia por país y día, filtrando solo eventos de conflicto material/verbal (QuadClass ≥ 3).
+</p>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title"><span>#1</span>Promedio Goldstein por País (últimos datos)</div>
+    <div class="chart-box"><canvas id="heatmapChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>#1</span>Tabla de Intensidad</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>País</th><th>Fecha</th><th>Goldstein Avg</th><th>Eventos</th></tr></thead>
+        <tbody>
+          {% for row in data.heatmap[:20] %}
+          <tr>
+            <td><span class="badge">{{ row.country }}</span></td>
+            <td>{{ row.date }}</td>
+            <td style="color:{% if row.avg_goldstein < -3 %}var(--danger){% elif row.avg_goldstein > 3 %}var(--ok){% else %}var(--text){% endif %}">
+              {{ "%.2f"|format(row.avg_goldstein|float) if row.avg_goldstein else 'N/A' }}
+            </td>
+            <td>{{ row.event_count }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--muted)">Sin datos aún — ejecuta el pipeline</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-top:2rem"><span style="color:var(--danger)">▸</span> Análisis 8 — Pares de Países en Conflicto Frecuente</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Pares de países (Actor1 ↔ Actor2) que más se enfrentan verbal o materialmente, contando
+  eventos con QuadClass ≥ 3 entre ambos.
+</p>
+<div class="card">
+  <div class="card-title"><span>#8</span>Top pares Actor1 ↔ Actor2</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Actor 1</th><th>Actor 2</th><th>Conflictos</th><th>Goldstein Avg</th></tr></thead>
+      <tbody>
+        {% for row in data.pairs[:15] %}
+        <tr>
+          <td><span class="badge badge-red">{{ row.actor1_country }}</span></td>
+          <td><span class="badge badge-red">{{ row.actor2_country }}</span></td>
+          <td>{{ row.conflict_count }}</td>
+          <td>{{ "%.2f"|format(row.avg_goldstein|float) if row.avg_goldstein else 'N/A' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 style="margin-top:2rem"><span style="color:var(--danger)">▸</span> Análisis 9 — Eventos con Escalada Acelerada</h2>
+<p class="subtitle" style="margin-bottom:1rem">
+  Eventos cuyas menciones se concentran de forma anormal en una sola hora respecto a las 24 horas
+  previas (ratio &gt; 0.5) — señal de que la cobertura mediática está acelerando de golpe.
+</p>
+<div class="card">
+  <div class="card-title"><span>#9</span>Eventos con ratio de escalada más alta (menciones en 24h)</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Event ID</th><th>Hora</th><th>Menciones 24h</th><th>Menciones 1h</th><th>Ratio</th></tr></thead>
+      <tbody>
+        {% for row in data.escalation[:10] %}
+        <tr>
+          <td><code>{{ row.GlobalEventID }}</code></td>
+          <td>{{ row.mention_hour }}</td>
+          <td>{{ row.mentions_last_24h }}</td>
+          <td>{{ row.mentions_this_hour }}</td>
+          <td><span class="badge badge-gold">{{ "%.2f"|format(row.escalation_ratio|float) if row.escalation_ratio else 'N/A' }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="color:var(--muted)">Sin datos</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:2rem">
+  <div>
+    <h2><span style="color:var(--danger)">▸</span> Análisis 14 — Red Diplomática vs. Conflicto</h2>
+    <p class="subtitle" style="margin-bottom:1rem">
+      Para cada par de países, cuenta cuántas interacciones fueron diplomáticas/cooperativas
+      (QuadClass 1-2) frente a cuántas fueron de conflicto (QuadClass 3-4).
+    </p>
+    <div class="card">
+      <div class="card-title"><span>#14</span>Interacciones diplomáticas y conflictos por par de países</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fuente</th><th>Destino</th><th>Diplomáticos</th><th>Conflictos</th></tr></thead>
+          <tbody>
+            {% for row in data.network[:12] %}
+            <tr>
+              <td>{{ row.source_country }}</td>
+              <td>{{ row.target_country }}</td>
+              <td style="color:var(--ok)">{{ row.diplomatic_count }}</td>
+              <td style="color:var(--danger)">{{ row.conflict_count }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="color:var(--muted)">Sin datos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div>
+    <h2><span style="color:var(--danger)">▸</span> Análisis 16 — Conflictos por Etnia</h2>
+    <p class="subtitle" style="margin-bottom:1rem">
+      Frecuencia de eventos de conflicto (QuadClass ≥ 3) agrupados por el código étnico
+      registrado del actor (Actor1EthnicCode / Actor2EthnicCode combinados).
+    </p>
+    <div class="card">
+      <div class="card-title"><span>#16</span>Grupos étnicos con más eventos de conflicto</div>
+      <div class="chart-box"><canvas id="ethnicChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── Chart 1: Heatmap / Goldstein bar chart ───────────────────
+  const heatmapData = {{ data.heatmap[:15] | tojson }};
+  if (heatmapData.length > 0) {
+    const ctx1 = document.getElementById('heatmapChart').getContext('2d');
+    new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: heatmapData.map(d => d.country),
+        datasets: [{
+          label: 'Goldstein Avg',
+          data: heatmapData.map(d => parseFloat(d.avg_goldstein) || 0),
+          backgroundColor: heatmapData.map(d => {
+            const v = parseFloat(d.avg_goldstein) || 0;
+            return v < 0 ? 'rgba(255,56,96,0.7)' : 'rgba(0,230,118,0.7)';
+          }),
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#506070', font: { family: 'Space Mono', size: 10 } }, grid: { color: '#1e2d40' } },
+          y: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } }
+        }
+      }
+    });
+  }
+
+  // ─── Chart 2: Ethnic conflicts bar ───────────────────────────
+  const ethnicData = {{ data.ethnic[:10] | tojson }};
+  if (ethnicData.length > 0) {
+    const ctx2 = document.getElementById('ethnicChart').getContext('2d');
+    new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: ethnicData.map(d => d.ethnicity || 'N/A'),
+        datasets: [{
+          label: 'Eventos de conflicto',
+          data: ethnicData.map(d => d.event_count),
+          backgroundColor: 'rgba(0,212,255,0.5)',
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#506070' }, grid: { color: '#1e2d40' } },
+          y: { ticks: { color: '#c8d8e8', font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}
